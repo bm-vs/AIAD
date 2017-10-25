@@ -1,7 +1,6 @@
 package data;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashMap;
 
@@ -12,18 +11,22 @@ public class Market {
 
     public Market() {
         stocks = new ArrayList<>();
-        ArrayList<String> stock_list = new ArrayList<String>(Arrays.asList("aapl", "amd", "amzn", "fb", "goog", "msft", "nvda", "tsla"));
-        for (String n: stock_list) {
-            stocks.add(new Stock("resources/" + n + ".csv"));
-        }
+        stocks.add(new Stock("Apple",     "resources/aapl.csv"));
+        stocks.add(new Stock("AMD",       "resources/amd.csv"));
+        stocks.add(new Stock("Amazon",    "resources/amzn.csv"));
+        stocks.add(new Stock("Facebook",  "resources/fb.csv"));
+        stocks.add(new Stock("Google",    "resources/goog.csv"));
+        stocks.add(new Stock("Microsoft", "resources/msft.csv"));
+        stocks.add(new Stock("Nvidia",    "resources/nvda.csv"));
+        stocks.add(new Stock("Tesla",     "resources/tsla.csv"));
     }
 
     // Get
     public ArrayList<Stock> getStocks() { return stocks; }
 
     // Get prices of all stocks at a given time
-    // @param: date (year, month, day, hour)
-    public HashMap<String, Float> getAllPrices(Calendar date) {
+    // @param: (year, month, day, hour)
+    public HashMap<String, Float> getPrices(Calendar date) {
         HashMap<String, Float> prices = new HashMap<>();
 
         for (Stock s: stocks) {
@@ -39,27 +42,12 @@ public class Market {
         return prices;
     }
 
-    // Get price of a single stock at a given time
-    // @param: symbol/name, date (year, month, day, hour)
-    public Float getSinglePrice(String stock, Calendar date) throws Exception{
-        for (Stock s: this.stocks) {
-            if (s.getName().equals(stock) || s.getSymbol().equals(stock)) {
-                return s.getPrice(date);
-            }
-        }
-
-        throw new Exception("Stock not found");
-    }
-
-
-
+    // Code to get progression of stock price during entire day
     public static void main(String[] args) {
-
-        // Get progression of all stock prices during a day
         Market nasdaq = new Market();
         ArrayList<HashMap<String, Float>> day = new ArrayList<>();
         for (int i = 9; i < 17; i++) {
-            day.add(nasdaq.getAllPrices(calendarBuilder(2016, 11, 10, i)));
+            day.add(nasdaq.getPrices(calendarBuilder(2016, 11, 10, i)));
         }
         for (String s: day.get(0).keySet()) {
             System.out.print(s + " - ");
@@ -67,16 +55,6 @@ public class Market {
                 System.out.print(day.get(i).get(s) + ", ");
             }
             System.out.println();
-        }
-
-        // Get price of a single stock at a given time
-        Market nyse = new Market();
-        try {
-            Float price = nyse.getSinglePrice("aapl", calendarBuilder(2016, 12, 30, 13));
-            System.out.print(price);
-        }
-        catch (Exception e){
-            e.printStackTrace();
         }
     }
 
