@@ -14,21 +14,21 @@ public final class Utils {
         String[] date = s.replaceAll("\uFEFF", "").split("-");
         int month;
         switch(date[1]) {
-            case "Jan": month = 1;  break;
-            case "Feb": month = 2;  break;
-            case "Mar": month = 3;  break;
-            case "Apr": month = 4;  break;
-            case "May": month = 5;  break;
-            case "Jun": month = 6;  break;
-            case "Jul": month = 7;  break;
-            case "Aug": month = 8;  break;
-            case "Sep": month = 9;  break;
-            case "Oct": month = 10; break;
-            case "Nov": month = 11; break;
-            case "Dec": month = 12; break;
+            case "Jan": month = 0;  break;
+            case "Feb": month = 1;  break;
+            case "Mar": month = 2;  break;
+            case "Apr": month = 3;  break;
+            case "May": month = 4;  break;
+            case "Jun": month = 5;  break;
+            case "Jul": month = 6;  break;
+            case "Aug": month = 7;  break;
+            case "Sep": month = 8;  break;
+            case "Oct": month = 9; break;
+            case "Nov": month = 10; break;
+            case "Dec": month = 11; break;
             default: throw new Exception("Invalid month");
         }
 
-        return new Calendar.Builder().setDate(Integer.parseInt(date[2]), month, Integer.parseInt(date[0])).build();
+        return new Calendar.Builder().setDate(2000+Integer.parseInt(date[2]), month, Integer.parseInt(date[0])).build();
     }
 }

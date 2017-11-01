@@ -1,5 +1,6 @@
 package model;
 
+import data.Market;
 import jade.content.lang.Codec;
 import jade.content.lang.sl.SLCodec;
 import jade.content.onto.Ontology;
@@ -12,19 +13,34 @@ import sajas.core.Agent;
 import sajas.core.behaviours.SimpleBehaviour;
 import sajas.domain.DFService;
 
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Random;
 
 public class InvestorAgent extends Agent {
     private Codec codec;
     private Ontology serviceOntology;
-    private int capital;
+    private ArrayList<Transaction> active;
+    private ArrayList<Transaction> done;
+    private double capital;
+    private Market market;
+    private Calendar currentTime;
 
-    public InvestorAgent(int initialCapital) {
+    public InvestorAgent(double initialCapital, Market market) {
         this.capital = initialCapital;
+        this.market = market;
+        this.currentTime = (Calendar) market.getStartDate().clone();
+        active = new ArrayList<>();
+        done = new ArrayList<>();
     }
 
-    public int getCapital() {
+    public double getCapital() {
         return capital;
+    }
+
+    public Calendar getCurrentTime() {
+        return currentTime;
     }
 
     @Override
@@ -50,7 +66,7 @@ public class InvestorAgent extends Agent {
         }
 
         // behaviours
-        addBehaviour(new InvestorBuy(this));
+        addBehaviour(new InvestorTrade(this));
     }
 
     @Override
@@ -62,16 +78,26 @@ public class InvestorAgent extends Agent {
         }
     }
 
-    private class InvestorBuy extends SimpleBehaviour {
+    private class InvestorTrade extends SimpleBehaviour {
         private boolean finished = false;
 
-        public InvestorBuy(Agent a) {
+        public InvestorTrade(Agent a) {
             super(a);
         }
 
         public void action() {
+            SimpleDateFormat f = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm");
+            try {
+                System.out.println(f.format(currentTime.getTime()) + " - " + market.getStocks().get(0).getPrice(currentTime));
+            }
+            catch (Exception e) {}
+
+
             Random r = new Random();
             capital += r.nextInt(1000);
+
+
+            currentTime.add(Calendar.HOUR_OF_DAY, 1);
         }
 
         public boolean done() {

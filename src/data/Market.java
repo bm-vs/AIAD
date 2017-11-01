@@ -7,9 +7,15 @@ import java.util.HashMap;
 import static utils.Utils.calendarBuilder;
 
 public class Market {
+    private int openHour;
+    private int closeHour;
     private ArrayList<Stock> stocks;
+    private Calendar startDate;
 
     public Market() {
+        openHour = 9;
+        closeHour = 17;
+
         stocks = new ArrayList<>();
         stocks.add(new Stock("Apple",     "resources/aapl.csv"));
         stocks.add(new Stock("AMD",       "resources/amd.csv"));
@@ -19,16 +25,28 @@ public class Market {
         stocks.add(new Stock("Microsoft", "resources/msft.csv"));
         stocks.add(new Stock("Nvidia",    "resources/nvda.csv"));
         stocks.add(new Stock("Tesla",     "resources/tsla.csv"));
+
+        startDate = calendarBuilder(3000, 0, 0, 0);
+        for (int i = 0; i < stocks.size(); i++) {
+            if (stocks.get(i).getStartDate().compareTo(startDate) < 0) {
+                startDate = stocks.get(i).getStartDate();
+            }
+        }
     }
 
     // Get
     public ArrayList<Stock> getStocks() { return stocks; }
+    public int getCloseHour() { return closeHour; }
+    public int getOpenHour() { return openHour; }
+    public Calendar getStartDate() {
+        startDate.set(Calendar.HOUR_OF_DAY, openHour-1);
+        return startDate;
+    }
 
     // Get prices of all stocks at a given time
     // @param: (year, month, day, hour)
     public HashMap<String, Float> getPrices(Calendar date) {
         HashMap<String, Float> prices = new HashMap<>();
-
         for (Stock s: stocks) {
             try {
                 prices.put(s.getName(), s.getPrice(date));
@@ -38,7 +56,6 @@ public class Market {
             }
 
         }
-
         return prices;
     }
 

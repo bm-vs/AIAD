@@ -3,6 +3,7 @@ package model;
 import java.util.ArrayList;
 import java.util.List;
 
+import data.Market;
 import jade.core.Profile;
 import jade.core.ProfileImpl;
 import sajas.core.Runtime;
@@ -19,13 +20,15 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 	private ContainerController mainContainer;
 	private ContainerController agentContainer;
 	private List<InvestorAgent> investors;
+	private Market market;
 	private OpenSequenceGraph plot;
 
 	private int nInvestors = 5;
-	private int initialCapital = 10000;
+	private double initialCapital = 10000;
 
 	public Repast3InvestingLauncher() {
 		super();
+		market = new Market();
 	}
 
 	public int getnInvestors() {
@@ -36,11 +39,11 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 		this.nInvestors = n;
 	}
 
-	public int getInitialCapital() {
+	public double getInitialCapital() {
 		return initialCapital;
 	}
 
-	public void setInitialCapital(int n) {
+	public void setInitialCapital(double n) {
 		this.initialCapital = n;
 	}
 
@@ -70,7 +73,7 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 		try {
 			// create investors
 			for (int i = 0; i < nInvestors; i++) {
-				InvestorAgent agent = new InvestorAgent(initialCapital);
+				InvestorAgent agent = new InvestorAgent(initialCapital, market);
 				agentContainer.acceptNewAgent("Investor" + i, agent).start();
 				investors.add(agent);
 			}

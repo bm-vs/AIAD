@@ -8,15 +8,18 @@ import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Calendar;
 
+import static utils.Utils.calendarBuilder;
 import static utils.Utils.stringToDate;
 
 public class Stock {
     private String name;
     private ArrayList<Day> days;
+    private Calendar startDate;
 
     public Stock(String name, String filename) {
         this.name = name;
         this.days = new ArrayList<>();
+        startDate = calendarBuilder(3000, 0, 0, 0);
 
         // CSV structure - Date, Open, High, Low, Close, Volume
         File file = new File(filename);
@@ -33,6 +36,9 @@ public class Stock {
                     continue;
                 }
                 days.add(day);
+                if (day.getDate().compareTo(startDate) < 0) {
+                    startDate = day.getDate();
+                }
             }
         }
         catch(Exception e) {
@@ -43,8 +49,9 @@ public class Stock {
     // Get
     public String getName() { return name; }
     public ArrayList<Day> getDays() { return days; }
+    public Calendar getStartDate() { return startDate; }
 
-    public Float getPrice(Calendar date) throws Exception{
+    public Float getPrice(Calendar date) throws Exception {
         for (Day d: days) {
             if (d.getDate().get(Calendar.DAY_OF_YEAR) == date.get(Calendar.DAY_OF_YEAR)) {
                 return d.getPrice(date);
