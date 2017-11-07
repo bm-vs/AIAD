@@ -35,6 +35,8 @@ public class InformerAgent extends Agent {
         this.ticksPerHour = ticksPerHour;
     }
 
+
+
     @Override
     public void setup() {
         // register language and ontology
@@ -57,7 +59,7 @@ public class InformerAgent extends Agent {
             System.err.println(e.getMessage());
         }
 
-        // behaviours
+        // Behaviours
         addBehaviour(new InformerBroadcast(this));
     }
 
@@ -70,6 +72,10 @@ public class InformerAgent extends Agent {
         }
     }
 
+
+
+    // Behaviours
+
     private class InformerBroadcast extends SimpleBehaviour {
         private boolean finished = false;
         private int ticks;
@@ -80,8 +86,6 @@ public class InformerAgent extends Agent {
         }
 
         public void action() {
-            SimpleDateFormat f = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm");
-
             // Update current date
             if (ticks == ticksPerHour) {
 

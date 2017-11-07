@@ -7,14 +7,14 @@ import java.util.HashMap;
 import static utils.Utils.calendarBuilder;
 
 public class Market {
-    private int openHour;
-    private int closeHour;
+    private int openTime;
+    private int closeTime;
     private ArrayList<Stock> stocks;
     private Calendar startDate;
 
-    public Market() {
-        openHour = 9;
-        closeHour = 17;
+    public Market(int openTime, int closeTime) {
+        this.openTime = openTime;
+        this.closeTime = closeTime;
 
         stocks = new ArrayList<>();
         stocks.add(new Stock("Apple", "aapl", "resources/aapl.csv"));
@@ -26,25 +26,20 @@ public class Market {
         stocks.add(new Stock("Nvidia", "nvda", "resources/nvda.csv"));
         stocks.add(new Stock("Tesla", "tsla", "resources/tsla.csv"));
 
-        startDate = calendarBuilder(3000, 0, 0, 0);
-        for (int i = 0; i < stocks.size(); i++) {
-            if (stocks.get(i).getStartDate().compareTo(startDate) < 0) {
-                startDate = stocks.get(i).getStartDate();
-            }
-        }
+        setStartDate();
     }
 
     // Get
     public ArrayList<Stock> getStocks() { return stocks; }
-    public int getCloseHour() { return closeHour; }
-    public int getOpenHour() { return openHour; }
+    public int getCloseTime() { return closeTime; }
+    public int getOpenTime() { return openTime; }
     public Calendar getStartDate() {
-        startDate.set(Calendar.HOUR_OF_DAY, openHour-1);
+        startDate.set(Calendar.HOUR_OF_DAY, openTime-1);
         return startDate;
     }
 
     // Get prices of all stocks at a given time
-    // @param: (year, month, day, hour)
+    // @param: Calendar with year, month, day and hour
     public HashMap<String, Float> getPrices(Calendar date) throws Exception {
         HashMap<String, Float> prices = new HashMap<>();
         for (Stock s: stocks) {
@@ -53,20 +48,13 @@ public class Market {
         return prices;
     }
 
-    // Code to get progression of stock price during entire day
-    public static void main(String[] args) {
-        Market nasdaq = new Market();
-        ArrayList<HashMap<String, Float>> day = new ArrayList<>();
-        for (int i = 9; i < 17; i++) {
-            //day.add(nasdaq.getPrices(calendarBuilder(2016, 11, 10, i)));
-        }
-        for (String s: day.get(0).keySet()) {
-            System.out.print(s + " - ");
-            for (int i = 0; i < day.size(); i++) {
-                System.out.print(day.get(i).get(s) + ", ");
+    // Set start date to day of first stock info
+    private void setStartDate() {
+        startDate = calendarBuilder(3000, 0, 0, 0);
+        for (int i = 0; i < stocks.size(); i++) {
+            if (stocks.get(i).getStartDate().compareTo(startDate) < 0) {
+                startDate = stocks.get(i).getStartDate();
             }
-            System.out.println();
         }
     }
-
 }

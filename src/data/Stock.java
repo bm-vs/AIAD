@@ -21,31 +21,8 @@ public class Stock {
         this.name = name;
         this.symbol = symbol;
         this.days = new ArrayList<>();
-        startDate = calendarBuilder(3000, 0, 0, 0);
-
-        // CSV structure - Date, Open, High, Low, Close, Volume
-        File file = new File(filename);
-        try {
-            BufferedReader reader = new BufferedReader(new FileReader(file));
-            String line;
-            while ((line = reader.readLine()) != null) {
-                String[] numbers = line.split(",");
-                Day day;
-                try {
-                    day = new Day(stringToDate(numbers[0]), Float.parseFloat(numbers[1]), Float.parseFloat(numbers[4]), Float.parseFloat(numbers[3]), Float.parseFloat(numbers[2]), Integer.parseInt(numbers[5]));
-                }
-                catch (Exception e) {
-                    continue;
-                }
-                days.add(day);
-                if (day.getDate().compareTo(startDate) < 0) {
-                    startDate = day.getDate();
-                }
-            }
-        }
-        catch(Exception e) {
-            e.printStackTrace();
-        }
+        this.startDate = calendarBuilder(3000, 0, 0, 0);
+        readDaysFromCSV(filename);
     }
 
     // Get
@@ -53,7 +30,6 @@ public class Stock {
     public ArrayList<Day> getDays() { return days; }
     public Calendar getStartDate() { return startDate; }
     public String getSymbol() { return symbol; }
-
     public Float getPrice(Calendar date) throws Exception {
         for (Day d: days) {
             if (d.getDate().get(Calendar.DAY_OF_YEAR) == date.get(Calendar.DAY_OF_YEAR)) {
@@ -62,5 +38,29 @@ public class Stock {
         }
 
         throw new Exception("Date not found");
+    }
+
+    // Read each day from CSV file, update start date
+    // CSV structure - Date, Open, High, Low, Close, Volume
+    private void readDaysFromCSV(String filename) {
+        File file = new File(filename);
+        try {
+            BufferedReader reader = new BufferedReader(new FileReader(file));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] numbers = line.split(",");
+                try {
+                    Day day = new Day(stringToDate(numbers[0]), Float.parseFloat(numbers[1]), Float.parseFloat(numbers[4]), Float.parseFloat(numbers[3]), Float.parseFloat(numbers[2]), Integer.parseInt(numbers[5]));
+                    days.add(day);
+                    if (day.getDate().compareTo(startDate) < 0) {
+                        startDate = day.getDate();
+                    }
+                }
+                catch (Exception e) {}
+            }
+        }
+        catch(Exception e) {
+            e.printStackTrace();
+        }
     }
 }

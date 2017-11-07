@@ -15,15 +15,19 @@ import uchicago.src.sim.analysis.OpenSequenceGraph;
 import uchicago.src.sim.analysis.Sequence;
 import uchicago.src.sim.engine.Schedule;
 import uchicago.src.sim.engine.SimInit;
+import utils.Utils;
 
 public class Repast3InvestingLauncher extends Repast3Launcher {
 	private ContainerController mainContainer;
 	private ContainerController agentContainer;
-	private InformerAgent informer;
-	private List<InvestorAgent> investors;
-	private Market market;
 	private OpenSequenceGraph plot;
 
+	// Data
+	private Market market;
+	private InformerAgent informer;
+	private List<InvestorAgent> investors;
+
+	// Simulation paramaters
 	private int nInvestors = 1;
 	private float initialCapital = 10000;
 	private int ticksPerHour = 10;
@@ -31,7 +35,7 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 
 	public Repast3InvestingLauncher() {
 		super();
-		market = new Market();
+		market = new Market(Utils.OPEN_TIME, Utils.CLOSE_TIME);
 	}
 
 	public int getNInvestors() {
@@ -76,14 +80,14 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 		investors = new ArrayList<InvestorAgent>();
 		
 		try {
-			// create investors
+			// Create investors
 			for (int i = 0; i < nInvestors; i++) {
 				InvestorAgent agent = new InvestorAgent(initialCapital, 0, false);
 				agentContainer.acceptNewAgent("Investor" + i, agent).start();
 				investors.add(agent);
 			}
 
-			// create informer agent
+			// Create informer agent
 			informer = new InformerAgent(market, nInvestors, ticksPerHour);
 			agentContainer.acceptNewAgent("Informer", informer).start();
 		}

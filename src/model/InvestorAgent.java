@@ -31,8 +31,8 @@ public class InvestorAgent extends Agent {
         this.capital = initialCapital;
         this.confidence = confidence;
         this.learn = learn;
-        active = new ArrayList<>();
-        closed = new ArrayList<>();
+        this.active = new ArrayList<>();
+        this.closed = new ArrayList<>();
     }
 
     public float getCapital() {
@@ -42,6 +42,16 @@ public class InvestorAgent extends Agent {
     public boolean getLearn() { return learn; }
     public float getPortfolioValue() { return portfolioValue; }
     public float getTotalCapital() { return capital + portfolioValue; }
+
+    // Updates the sum of values of every stock
+    private void updatePortfolioValue(HashMap<String, Float> prices) {
+        portfolioValue = 0;
+        for (Transaction t: active) {
+            portfolioValue += prices.get(t.getStock())*t.getQuantity();
+        }
+    }
+
+    
 
     @Override
     public void setup() {
@@ -65,7 +75,7 @@ public class InvestorAgent extends Agent {
             System.err.println(e.getMessage());
         }
 
-        // behaviours
+        // Behaviours
         addBehaviour(new InvestorTrade(this));
     }
 
@@ -77,6 +87,9 @@ public class InvestorAgent extends Agent {
             e.printStackTrace();
         }
     }
+
+
+    // Behaviours
 
     private class InvestorTrade extends SimpleBehaviour {
         private boolean finished = false;
@@ -92,7 +105,7 @@ public class InvestorAgent extends Agent {
                     HashMap<String, Float> prices = (HashMap<String, Float>) stockPrices.getContentObject();
                     simpleSell(prices);
                     simpleBuy(prices);
-                    updatePorfolioValue(prices);
+                    updatePortfolioValue(prices);
                 }
                 catch (Exception e) {
                     e.printStackTrace();
@@ -128,13 +141,6 @@ public class InvestorAgent extends Agent {
                 Transaction t = new Transaction(s, price, quantity);
                 active.add(t);
                 capital -= price*quantity;
-            }
-        }
-
-        private void updatePorfolioValue(HashMap<String, Float> prices) {
-            portfolioValue = 0;
-            for (Transaction t: active) {
-                portfolioValue += prices.get(t.getStock())*t.getQuantity();
             }
         }
     }
