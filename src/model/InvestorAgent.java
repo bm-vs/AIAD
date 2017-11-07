@@ -1,6 +1,5 @@
 package model;
 
-import data.Market;
 import jade.content.lang.Codec;
 import jade.content.lang.sl.SLCodec;
 import jade.content.onto.Ontology;
@@ -8,40 +7,41 @@ import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.domain.FIPAException;
 import jade.domain.FIPANames;
+import jade.lang.acl.ACLMessage;
 import model.onto.ServiceOntology;
 import sajas.core.Agent;
 import sajas.core.behaviours.SimpleBehaviour;
 import sajas.domain.DFService;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Random;
+import java.util.HashMap;
+import java.util.Iterator;
 
 public class InvestorAgent extends Agent {
     private Codec codec;
     private Ontology serviceOntology;
     private ArrayList<Transaction> active;
-    private ArrayList<Transaction> done;
-    private double capital;
-    private Market market;
-    private Calendar currentTime;
+    private ArrayList<Transaction> closed;
+    private float capital;
+    private float portfolioValue;
+    private double confidence;
+    private boolean learn;
 
-    public InvestorAgent(double initialCapital, Market market) {
+    public InvestorAgent(float initialCapital, double confidence, boolean learn) {
         this.capital = initialCapital;
-        this.market = market;
-        this.currentTime = (Calendar) market.getStartDate().clone();
+        this.confidence = confidence;
+        this.learn = learn;
         active = new ArrayList<>();
-        done = new ArrayList<>();
+        closed = new ArrayList<>();
     }
 
-    public double getCapital() {
+    public float getCapital() {
         return capital;
     }
-
-    public Calendar getCurrentTime() {
-        return currentTime;
-    }
+    public double getConfidence() { return confidence; }
+    public boolean getLearn() { return learn; }
+    public float getPortfolioValue() { return portfolioValue; }
+    public float getTotalCapital() { return capital + portfolioValue; }
 
     @Override
     public void setup() {
@@ -86,22 +86,56 @@ public class InvestorAgent extends Agent {
         }
 
         public void action() {
-            SimpleDateFormat f = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm");
-            try {
-                System.out.println(f.format(currentTime.getTime()) + " - " + market.getStocks().get(0).getPrice(currentTime));
+            ACLMessage stockPrices = receive();
+            if (stockPrices != null) {
+                try {
+                    HashMap<String, Float> prices = (HashMap<String, Float>) stockPrices.getContentObject();
+                    simpleSell(prices);
+                    simpleBuy(prices);
+                    updatePorfolioValue(prices);
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
-            catch (Exception e) {}
-
-
-            Random r = new Random();
-            capital += r.nextInt(1000);
-
-
-            currentTime.add(Calendar.HOUR_OF_DAY, 1);
+            block();
         }
 
         public boolean done() {
             return finished;
+        }
+
+        private void simpleSell(HashMap<String, Float> prices) {
+            for (Iterator<Transaction> it = active.iterator(); it.hasNext(); ) {
+                Transaction t = it.next();
+                float currentPrice = prices.get(t.getStock());
+                if (currentPrice / t.getBuyPrice() > 1.10 || currentPrice / t.getBuyPrice() < 0.99) {
+                    t.setSellPrice(currentPrice);
+                    t.closeTransaction();
+                    closed.add(t);
+                    it.remove();
+                    capital += t.getQuantity()*currentPrice;
+                }
+            }
+        }
+
+        private void simpleBuy(HashMap<String, Float> prices) {
+            int nStocks = prices.keySet().size();
+            float amountPerStock = capital*0.8f/nStocks;
+            for (String s: prices.keySet()) {
+                float price = prices.get(s);
+                int quantity = Math.round(amountPerStock/price);
+                Transaction t = new Transaction(s, price, quantity);
+                active.add(t);
+                capital -= price*quantity;
+            }
+        }
+
+        private void updatePorfolioValue(HashMap<String, Float> prices) {
+            portfolioValue = 0;
+            for (Transaction t: active) {
+                portfolioValue += prices.get(t.getStock())*t.getQuantity();
+            }
         }
     }
 }

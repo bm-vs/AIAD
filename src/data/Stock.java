@@ -13,11 +13,13 @@ import static utils.Utils.stringToDate;
 
 public class Stock {
     private String name;
+    private String symbol;
     private ArrayList<Day> days;
     private Calendar startDate;
 
-    public Stock(String name, String filename) {
+    public Stock(String name, String symbol, String filename) {
         this.name = name;
+        this.symbol = symbol;
         this.days = new ArrayList<>();
         startDate = calendarBuilder(3000, 0, 0, 0);
 
@@ -50,6 +52,7 @@ public class Stock {
     public String getName() { return name; }
     public ArrayList<Day> getDays() { return days; }
     public Calendar getStartDate() { return startDate; }
+    public String getSymbol() { return symbol; }
 
     public Float getPrice(Calendar date) throws Exception {
         for (Day d: days) {

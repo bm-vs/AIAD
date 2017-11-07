@@ -1,54 +1,44 @@
 package model;
 
-import data.Stock;
-
 public class Transaction {
-    private Stock stock;
-    private double buyPrice;
+    private String stockSymbol;
+    private float buyPrice;
     private int quantity;
-    private double sellPrice;
+    private float sellPrice;
     private boolean done;
 
-    public Transaction(Stock stock) {
-        this.stock = stock;
+    public Transaction(String stockSymbol) {
+        this.stockSymbol = stockSymbol;
         this.done = false;
     }
 
-    public Transaction(Stock stock, double buyPrice, int quantity) {
-        this.stock = stock;
+    public Transaction(String stockSymbol, float buyPrice, int quantity) {
+        this.stockSymbol = stockSymbol;
         this.buyPrice = buyPrice;
         this.quantity = quantity;
         this.done = false;
     }
 
-    public Stock getStock() {
-        return stock;
-    }
-
+    public String getStock() { return stockSymbol; }
     public double getBuyPrice() {
         return buyPrice;
     }
-
     public int getQuantity() {
         return quantity;
     }
-
     public double getSellPrice() {
         return sellPrice;
     }
 
-    public void setBuyPrice(double buyPrice) {
+    public void setBuyPrice(float buyPrice) {
         this.buyPrice = buyPrice;
     }
-
     public void setQuantity(int quantity) {
         this.quantity = quantity;
     }
-
-    public void setSellPrice(double sellPrice) {
+    public void setSellPrice(float sellPrice) {
         this.sellPrice = sellPrice;
     }
-
     public void closeTransaction() {
         this.done = true;
     }
