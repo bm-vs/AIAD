@@ -12,6 +12,7 @@ import model.onto.ServiceOntology;
 import sajas.core.Agent;
 import sajas.core.behaviours.SimpleBehaviour;
 import sajas.domain.DFService;
+import utils.Pair;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,10 +45,10 @@ public class InvestorAgent extends Agent {
     public float getTotalCapital() { return capital + portfolioValue; }
 
     // Updates the sum of values of every stock
-    private void updatePortfolioValue(HashMap<String, Float> prices) {
+    private void updatePortfolioValue(HashMap<String, Pair> prices) {
         portfolioValue = 0;
         for (Transaction t: active) {
-            portfolioValue += prices.get(t.getStock())*t.getQuantity();
+            portfolioValue += prices.get(t.getStock()).getCurr()*t.getQuantity();
         }
     }
 
@@ -102,7 +103,7 @@ public class InvestorAgent extends Agent {
             ACLMessage stockPrices = receive();
             if (stockPrices != null) {
                 try {
-                    HashMap<String, Float> prices = (HashMap<String, Float>) stockPrices.getContentObject();
+                    HashMap<String, Pair> prices = (HashMap<String, Pair>) stockPrices.getContentObject();
                     simpleSell(prices);
                     simpleBuy(prices);
                     updatePortfolioValue(prices);
@@ -118,29 +119,43 @@ public class InvestorAgent extends Agent {
             return finished;
         }
 
-        private void simpleSell(HashMap<String, Float> prices) {
+        private void simpleSell(HashMap<String, Pair> prices) {
             for (Iterator<Transaction> it = active.iterator(); it.hasNext(); ) {
                 Transaction t = it.next();
-                float currentPrice = prices.get(t.getStock());
-                if (currentPrice / t.getBuyPrice() > 1.10 || currentPrice / t.getBuyPrice() < 0.99) {
-                    t.setSellPrice(currentPrice);
-                    t.closeTransaction();
-                    closed.add(t);
-                    it.remove();
-                    capital += t.getQuantity()*currentPrice;
-                }
+                float currentPrice = prices.get(t.getStock()).getCurr();
+
+                t.setSellPrice(currentPrice);
+                t.closeTransaction();
+                closed.add(t);
+                it.remove();
+                capital += t.getQuantity()*currentPrice;
             }
         }
 
-        private void simpleBuy(HashMap<String, Float> prices) {
-            int nStocks = prices.keySet().size();
-            float amountPerStock = capital*0.8f/nStocks;
+        private void simpleBuy(HashMap<String, Pair> prices) {
+            float total = 0;
+            HashMap<String, Float> growth = new HashMap<>();
+            for (String s : prices.keySet()) {
+                Pair p = prices.get(s);
+                float g = (p.getFut()-p.getCurr())/p.getCurr();
+                growth.put(s, g);
+                if (g > 0) {
+                    total += g;
+                }
+            }
+
             for (String s: prices.keySet()) {
-                float price = prices.get(s);
-                int quantity = Math.round(amountPerStock/price);
-                Transaction t = new Transaction(s, price, quantity);
-                active.add(t);
-                capital -= price*quantity;
+                float g = growth.get(s);
+                if (g > 0) {
+                    float amountPerStock = capital*g/total;
+                    float price = prices.get(s).getCurr();
+                    int quantity = Math.round(amountPerStock / price);
+                    if (quantity > 0) {
+                        Transaction t = new Transaction(s, price, quantity);
+                        active.add(t);
+                        capital -= price * quantity;
+                    }
+                }
             }
         }
     }

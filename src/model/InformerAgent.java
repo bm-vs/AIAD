@@ -14,11 +14,13 @@ import sajas.core.AID;
 import sajas.core.Agent;
 import sajas.core.behaviours.SimpleBehaviour;
 import sajas.domain.DFService;
+import utils.Pair;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.Random;
 
 public class InformerAgent extends Agent {
     private Codec codec;
@@ -91,10 +93,21 @@ public class InformerAgent extends Agent {
 
                 // Sends stock prices to every investor
                 try {
-                    HashMap<String, Float> prices = market.getPrices(currentTime);
+                    HashMap<String, Float> currentPrices = market.getPrices(currentTime);
+                    Calendar futureTime = (Calendar) currentTime.clone();
+                    futureTime.add(Calendar.HOUR_OF_DAY, 1);
+                    HashMap<String, Float> futurePrices = market.getPrices(futureTime);
+
+                    Random r = new Random();
                     for (int i = 0; i < nInvestors; i++) {
+                        HashMap<String, Pair> priceInfo = new HashMap<>();
+                        for (String key : currentPrices.keySet()) {
+                            Pair p = new Pair(currentPrices.get(key), futurePrices.get(key)+futurePrices.get(key)*(float)r.nextGaussian()*i);
+                            priceInfo.put(key, p);
+                        }
+
                         ACLMessage stockPrices = new ACLMessage(ACLMessage.INFORM);
-                        stockPrices.setContentObject(prices);
+                        stockPrices.setContentObject(priceInfo);
                         stockPrices.addReceiver(new AID("Investor" + i, AID.ISLOCALNAME));
                         send(stockPrices);
                     }
