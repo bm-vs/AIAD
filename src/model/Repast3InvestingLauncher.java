@@ -2,6 +2,7 @@ package model;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import data.Market;
 import jade.core.Profile;
@@ -15,7 +16,10 @@ import uchicago.src.sim.analysis.OpenSequenceGraph;
 import uchicago.src.sim.analysis.Sequence;
 import uchicago.src.sim.engine.Schedule;
 import uchicago.src.sim.engine.SimInit;
-import utils.Utils;
+import utils.MarketSettings;
+
+import static utils.InvestorSettings.INVESTOR_MAX_SKILL;
+import static utils.InvestorSettings.N_PROFILES;
 
 public class Repast3InvestingLauncher extends Repast3Launcher {
 	private ContainerController mainContainer;
@@ -35,26 +39,40 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 
 	public Repast3InvestingLauncher() {
 		super();
-		market = new Market(Utils.OPEN_TIME, Utils.CLOSE_TIME);
+		market = new Market(MarketSettings.OPEN_TIME, MarketSettings.CLOSE_TIME);
 	}
 
 	public int getNInvestors() {
 		return nInvestors;
 	}
+
 	public float getInitialCapital() {
 		return initialCapital;
 	}
-	public int getTicksPerHour() { return ticksPerHour; }
-	public boolean getDetailedInfo() { return detailedInfo; }
+
+	public int getTicksPerHour() {
+	    return ticksPerHour;
+	}
+
+	public boolean getDetailedInfo() {
+	    return detailedInfo;
+	}
 
 	public void setNInvestors(int n) {
 		nInvestors = n;
 	}
+
 	public void setInitialCapital(float n) {
 		initialCapital = n;
 	}
-	public void setTicksPerHour(int n) { ticksPerHour = n; }
-	public void setDetailedInfo(boolean b) { detailedInfo = b; }
+
+	public void setTicksPerHour(int n) {
+        ticksPerHour = n;
+    }
+
+	public void setDetailedInfo(boolean b) {
+	    detailedInfo = b;
+	}
 
 	@Override
 	public String[] getInitParam() {
@@ -77,13 +95,21 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 	}
 	
 	private void launchAgents() {
-		investors = new ArrayList<InvestorAgent>();
+		investors = new ArrayList<>();
+		int nSectors = market.getNSectors();
 		
 		try {
 			// Create investors
+            Random r = new Random();
 			for (int i = 0; i < nInvestors; i++) {
-				InvestorAgent agent = new InvestorAgent(initialCapital, 0, false);
-				agentContainer.acceptNewAgent("Investor" + i, agent).start();
+				String id = "Investor" + i;
+				ArrayList<Integer> skill = new ArrayList<>();
+				for (int j = 0; j < nSectors; j++) {
+				    skill.add(r.nextInt(INVESTOR_MAX_SKILL));
+                }
+
+				InvestorAgent agent = new InvestorAgent(id, initialCapital, skill, r.nextInt(N_PROFILES));
+				agentContainer.acceptNewAgent(id, agent).start();
 				investors.add(agent);
 			}
 

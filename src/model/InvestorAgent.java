@@ -9,11 +9,13 @@ import jade.domain.FIPAException;
 import jade.domain.FIPANames;
 import jade.lang.acl.ACLMessage;
 import model.onto.ServiceOntology;
+import sajas.core.AID;
 import sajas.core.Agent;
 import sajas.core.behaviours.SimpleBehaviour;
 import sajas.domain.DFService;
-import utils.Pair;
+import utils.StockPrice;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -23,36 +25,53 @@ public class InvestorAgent extends Agent {
     private Ontology serviceOntology;
     private ArrayList<Transaction> active;
     private ArrayList<Transaction> closed;
+    private String id;
     private float capital;
     private float portfolioValue;
-    private double confidence;
-    private boolean learn;
+    private ArrayList<Integer> skill; // represents the knowledge (0-10) of each sector (0-5)
+    private int profile;
 
-    public InvestorAgent(float initialCapital, double confidence, boolean learn) {
+    public InvestorAgent(String id, float initialCapital, ArrayList<Integer> skill, int profile) {
+        this.id = id;
         this.capital = initialCapital;
-        this.confidence = confidence;
-        this.learn = learn;
+        this.skill = skill;
+        this.profile = profile;
         this.active = new ArrayList<>();
         this.closed = new ArrayList<>();
+    }
+
+    public String getId() {
+        return id;
     }
 
     public float getCapital() {
         return capital;
     }
-    public double getConfidence() { return confidence; }
-    public boolean getLearn() { return learn; }
-    public float getPortfolioValue() { return portfolioValue; }
-    public float getTotalCapital() { return capital + portfolioValue; }
+
+    public float getPortfolioValue() {
+        return portfolioValue;
+    }
+
+    public float getTotalCapital() {
+        return capital + portfolioValue;
+    }
+
+    public ArrayList<Integer> getSkill() {
+        return skill;
+    }
+
+    public int getProfile() {
+        return profile;
+    }
 
     // Updates the sum of values of every stock
-    private void updatePortfolioValue(HashMap<String, Pair> prices) {
+    private void updatePortfolioValue(HashMap<String, StockPrice> prices) {
         portfolioValue = 0;
         for (Transaction t: active) {
-            portfolioValue += prices.get(t.getStock()).getCurr()*t.getQuantity();
+            portfolioValue += prices.get(t.getStock()).getCurrPrice()*t.getQuantity();
         }
     }
 
-    
 
     @Override
     public void setup() {
@@ -91,19 +110,40 @@ public class InvestorAgent extends Agent {
 
 
     // Behaviours
-
     private class InvestorTrade extends SimpleBehaviour {
         private boolean finished = false;
+        private boolean subscribed = false;
+        private InvestorAgent agent;
 
-        public InvestorTrade(Agent a) {
+        public InvestorTrade(InvestorAgent a) {
             super(a);
+            agent = a;
         }
 
         public void action() {
+            if (!subscribed) {
+                try {
+                    ACLMessage subscribe = new ACLMessage(ACLMessage.SUBSCRIBE);
+                    subscribe.setContentObject(new InvestorInfo(agent));
+                    subscribe.addReceiver(new AID("Informer", AID.ISLOCALNAME));
+                    send(subscribe);
+
+                    ACLMessage reply = receive();
+                    if (reply != null && reply.getPerformative() == ACLMessage.AGREE) {
+                        subscribed = true;
+                        System.out.println(id + " subscribed ok");
+                    }
+                    block();
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
             ACLMessage stockPrices = receive();
             if (stockPrices != null) {
                 try {
-                    HashMap<String, Pair> prices = (HashMap<String, Pair>) stockPrices.getContentObject();
+                    HashMap<String, StockPrice> prices = (HashMap<String, StockPrice>) stockPrices.getContentObject();
                     simpleSell(prices);
                     simpleBuy(prices);
                     updatePortfolioValue(prices);
@@ -119,10 +159,10 @@ public class InvestorAgent extends Agent {
             return finished;
         }
 
-        private void simpleSell(HashMap<String, Pair> prices) {
+        private void simpleSell(HashMap<String, StockPrice> prices) {
             for (Iterator<Transaction> it = active.iterator(); it.hasNext(); ) {
                 Transaction t = it.next();
-                float currentPrice = prices.get(t.getStock()).getCurr();
+                float currentPrice = prices.get(t.getStock()).getCurrPrice();
 
                 t.setSellPrice(currentPrice);
                 t.closeTransaction();
@@ -132,12 +172,12 @@ public class InvestorAgent extends Agent {
             }
         }
 
-        private void simpleBuy(HashMap<String, Pair> prices) {
+        private void simpleBuy(HashMap<String, StockPrice> prices) {
             float total = 0;
             HashMap<String, Float> growth = new HashMap<>();
             for (String s : prices.keySet()) {
-                Pair p = prices.get(s);
-                float g = (p.getFut()-p.getCurr())/p.getCurr();
+                StockPrice p = prices.get(s);
+                float g = (p.getDayPrice()-p.getCurrPrice())/p.getCurrPrice();
                 growth.put(s, g);
                 if (g > 0) {
                     total += g;
@@ -148,7 +188,7 @@ public class InvestorAgent extends Agent {
                 float g = growth.get(s);
                 if (g > 0) {
                     float amountPerStock = capital*g/total;
-                    float price = prices.get(s).getCurr();
+                    float price = prices.get(s).getCurrPrice();
                     int quantity = Math.round(amountPerStock / price);
                     if (quantity > 0) {
                         Transaction t = new Transaction(s, price, quantity);
@@ -157,6 +197,24 @@ public class InvestorAgent extends Agent {
                     }
                 }
             }
+        }
+    }
+
+    public class InvestorInfo implements Serializable {
+        private String id;
+        private ArrayList<Integer> skill;
+
+        public InvestorInfo(InvestorAgent agent) {
+            this.id = agent.getId();
+            this.skill = agent.getSkill();
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public ArrayList<Integer> getSkill() {
+            return skill;
         }
     }
 }

@@ -14,13 +14,10 @@ import sajas.core.AID;
 import sajas.core.Agent;
 import sajas.core.behaviours.SimpleBehaviour;
 import sajas.domain.DFService;
-import utils.Pair;
+import utils.StockPrice;
 
-import java.io.IOException;
-import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Random;
 
 public class InformerAgent extends Agent {
     private Codec codec;
@@ -88,31 +85,40 @@ public class InformerAgent extends Agent {
         }
 
         public void action() {
+            ACLMessage subscriptions = receive();
+            if (subscriptions != null && subscriptions.getPerformative() == ACLMessage.SUBSCRIBE) {
+                try {
+                    InvestorAgent.InvestorInfo investor = (InvestorAgent.InvestorInfo) subscriptions.getContentObject();
+                    System.out.println(investor.getId() + " subscribed");
+
+                    ACLMessage reply = subscriptions.createReply();
+                    reply.setPerformative(ACLMessage.AGREE);
+                    send(reply);
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            block();
+
             // Update current date
             if (ticks == ticksPerHour) {
-
                 // Sends stock prices to every investor
                 try {
-                    HashMap<String, Float> currentPrices = market.getPrices(currentTime);
-                    Calendar futureTime = (Calendar) currentTime.clone();
-                    futureTime.add(Calendar.HOUR_OF_DAY, 1);
-                    HashMap<String, Float> futurePrices = market.getPrices(futureTime);
+                    ArrayList<StockPrice> prices = market.getPrices(currentTime);
 
-                    Random r = new Random();
                     for (int i = 0; i < nInvestors; i++) {
-                        HashMap<String, Pair> priceInfo = new HashMap<>();
-                        for (String key : currentPrices.keySet()) {
-                            Pair p = new Pair(currentPrices.get(key), futurePrices.get(key)+futurePrices.get(key)*(float)r.nextGaussian()*i);
-                            priceInfo.put(key, p);
-                        }
+                        // TODO: for each investor change future prices to reflect their skill
+
 
                         ACLMessage stockPrices = new ACLMessage(ACLMessage.INFORM);
-                        stockPrices.setContentObject(priceInfo);
+                        stockPrices.setContentObject(prices);
                         stockPrices.addReceiver(new AID("Investor" + i, AID.ISLOCALNAME));
                         send(stockPrices);
                     }
                 }
                 catch (Exception e) {
+                    e.printStackTrace();
                 }
 
                 currentTime.add(Calendar.HOUR_OF_DAY, 1);

@@ -14,20 +14,38 @@ public class Stock {
     private String symbol;
     private ArrayList<Day> days;
     private Calendar startDate;
+    private int sector;
 
-    public Stock(String name, String symbol, String filename) {
+    public Stock(String name, String symbol, String filename, int sector) {
         this.name = name;
         this.symbol = symbol;
         this.days = new ArrayList<>();
         this.startDate = calendarBuilder(3000, 0, 0, 0);
+        this.sector = sector;
         readDaysFromCSV(filename);
     }
 
     // Get
-    public String getName() { return name; }
-    public ArrayList<Day> getDays() { return days; }
-    public Calendar getStartDate() { return startDate; }
-    public String getSymbol() { return symbol; }
+    public String getName() {
+        return name;
+    }
+
+    public ArrayList<Day> getDays() {
+        return days;
+    }
+
+    public Calendar getStartDate() {
+        return startDate;
+    }
+
+    public String getSymbol() {
+        return symbol;
+    }
+
+    public int getSector() {
+        return sector;
+    }
+
     public Float getPrice(Calendar date) throws Exception {
         for (Day d: days) {
             if (d.getDate().get(Calendar.DAY_OF_YEAR) == date.get(Calendar.DAY_OF_YEAR)) {

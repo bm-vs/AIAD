@@ -19,26 +19,36 @@ public class Transaction {
         this.done = false;
     }
 
-    public String getStock() { return stockSymbol; }
+    // Get
+    public String getStock() {
+        return stockSymbol;
+    }
+
     public double getBuyPrice() {
         return buyPrice;
     }
+
     public int getQuantity() {
         return quantity;
     }
+
     public double getSellPrice() {
         return sellPrice;
     }
 
+    // Set
     public void setBuyPrice(float buyPrice) {
         this.buyPrice = buyPrice;
     }
+
     public void setQuantity(int quantity) {
         this.quantity = quantity;
     }
+
     public void setSellPrice(float sellPrice) {
         this.sellPrice = sellPrice;
     }
+
     public void closeTransaction() {
         this.done = true;
     }
