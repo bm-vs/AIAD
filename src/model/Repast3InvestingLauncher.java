@@ -114,7 +114,7 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 			}
 
 			// Create informer agent
-			informer = new InformerAgent(market, nInvestors, ticksPerHour);
+			informer = new InformerAgent(market, ticksPerHour);
 			agentContainer.acceptNewAgent("Informer", informer).start();
 		}
 		catch (StaleProxyException e) {

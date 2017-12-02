@@ -20,6 +20,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import static utils.MarketSettings.*;
+
 public class InvestorAgent extends Agent implements Serializable {
     private Codec codec;
     private Ontology serviceOntology;
@@ -131,7 +133,7 @@ public class InvestorAgent extends Agent implements Serializable {
                     ACLMessage reply = receive();
                     if (reply != null && reply.getPerformative() == ACLMessage.AGREE) {
                         subscribed = true;
-                        System.out.println(id + " subscribed ok");
+                        //System.out.println(id + " subscribed ok");
                     }
                     block();
                 }
@@ -216,6 +218,20 @@ public class InvestorAgent extends Agent implements Serializable {
 
         public ArrayList<Integer> getSkill() {
             return skill;
+        }
+
+        @Override
+        public String toString() {
+            String s = id + "\n";
+
+            s += "telecom: " + skill.get(TELECOM) + "\n";
+            s += "financial: " + skill.get(FINANCIAL) + "\n";
+            s += "industrial: " + skill.get(INDUSTRIAL) + "\n";
+            s += "energy: " + skill.get(ENERGY) + "\n";
+            s += "healthcare: " + skill.get(HEALTHCARE) + "\n";
+            s += "tech: " + skill.get(TECH) + "\n";
+
+            return s;
         }
     }
 }

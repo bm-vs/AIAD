@@ -24,14 +24,14 @@ public class InformerAgent extends Agent {
     private Ontology serviceOntology;
     private Market market;
     private Calendar currentTime;
-    private int nInvestors;
     private int ticksPerHour;
+    private ArrayList<InvestorAgent.InvestorInfo> investors;
 
-    public InformerAgent(Market market, int nInvestors, int ticksPerHour) {
+    public InformerAgent(Market market, int ticksPerHour) {
         this.market = market;
         this.currentTime = market.getStartDate();
-        this.nInvestors = nInvestors;
         this.ticksPerHour = ticksPerHour;
+        this.investors = new ArrayList<>();
     }
 
 
@@ -89,7 +89,9 @@ public class InformerAgent extends Agent {
             if (subscriptions != null && subscriptions.getPerformative() == ACLMessage.SUBSCRIBE) {
                 try {
                     InvestorAgent.InvestorInfo investor = (InvestorAgent.InvestorInfo) subscriptions.getContentObject();
-                    System.out.println(investor.getId() + " subscribed");
+                    investors.add(investor);
+                    //System.out.println(investor.getId() + " subscribed");
+                    //System.out.println(investors);
 
                     ACLMessage reply = subscriptions.createReply();
                     reply.setPerformative(ACLMessage.AGREE);
@@ -103,17 +105,16 @@ public class InformerAgent extends Agent {
 
             // Update current date
             if (ticks == ticksPerHour) {
-                // Sends stock prices to every investorskill
+                // Sends stock prices to every investor
                 try {
                     ArrayList<StockPrice> prices = market.getPrices(currentTime);
 
-                    for (int i = 0; i < nInvestors; i++) {
+                    for (InvestorAgent.InvestorInfo investor : investors) {
                         // TODO: for each investor change future prices to reflect their skill
-
 
                         ACLMessage stockPrices = new ACLMessage(ACLMessage.INFORM);
                         stockPrices.setContentObject(prices);
-                        stockPrices.addReceiver(new AID("Investor" + i, AID.ISLOCALNAME));
+                        stockPrices.addReceiver(new AID(investor.getId(), AID.ISLOCALNAME));
                         send(stockPrices);
                     }
                 }
