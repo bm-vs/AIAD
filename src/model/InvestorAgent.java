@@ -20,7 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 
-public class InvestorAgent extends Agent {
+public class InvestorAgent extends Agent implements Serializable {
     private Codec codec;
     private Ontology serviceOntology;
     private ArrayList<Transaction> active;
@@ -124,7 +124,7 @@ public class InvestorAgent extends Agent {
             if (!subscribed) {
                 try {
                     ACLMessage subscribe = new ACLMessage(ACLMessage.SUBSCRIBE);
-                    subscribe.setContentObject(new InvestorInfo(agent));
+                    subscribe.setContentObject(new InvestorInfo(agent.getId(), agent.getSkill()));
                     subscribe.addReceiver(new AID("Informer", AID.ISLOCALNAME));
                     send(subscribe);
 
@@ -201,12 +201,13 @@ public class InvestorAgent extends Agent {
     }
 
     public class InvestorInfo implements Serializable {
+
         private String id;
         private ArrayList<Integer> skill;
 
-        public InvestorInfo(InvestorAgent agent) {
-            this.id = agent.getId();
-            this.skill = agent.getSkill();
+        public InvestorInfo(String id, ArrayList<Integer> skill) {
+            this.id = id;
+            this.skill = skill;
         }
 
         public String getId() {

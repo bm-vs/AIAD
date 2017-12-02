@@ -103,7 +103,7 @@ public class InformerAgent extends Agent {
 
             // Update current date
             if (ticks == ticksPerHour) {
-                // Sends stock prices to every investor
+                // Sends stock prices to every investorskill
                 try {
                     ArrayList<StockPrice> prices = market.getPrices(currentTime);
 
