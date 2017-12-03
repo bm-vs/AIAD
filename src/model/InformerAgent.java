@@ -18,6 +18,7 @@ import utils.StockPrice;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 
 public class InformerAgent extends Agent {
     private Codec codec;
@@ -101,7 +102,6 @@ public class InformerAgent extends Agent {
                     e.printStackTrace();
                 }
             }
-            block();
 
             // Update current date
             if (ticks == ticksPerHour) {
@@ -110,16 +110,18 @@ public class InformerAgent extends Agent {
                     ArrayList<StockPrice> prices = market.getPrices(currentTime);
 
                     for (InvestorAgent.InvestorInfo investor : investors) {
-                        // TODO: for each investor change future prices to reflect their skill
-
+                        HashMap<String, StockPrice> investorPrices = new HashMap<>();
+                        for (StockPrice price: prices) {
+                            // TODO: for each investor change future prices to reflect their skill
+                            investorPrices.put(price.getSymbol(), price);
+                        }
                         ACLMessage stockPrices = new ACLMessage(ACLMessage.INFORM);
-                        stockPrices.setContentObject(prices);
+                        stockPrices.setContentObject(investorPrices);
                         stockPrices.addReceiver(new AID(investor.getId(), AID.ISLOCALNAME));
                         send(stockPrices);
                     }
                 }
                 catch (Exception e) {
-                    e.printStackTrace();
                 }
 
                 currentTime.add(Calendar.HOUR_OF_DAY, 1);

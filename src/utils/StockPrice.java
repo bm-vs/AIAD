@@ -1,7 +1,9 @@
 package utils;
 
+import java.io.Serializable;
+
 // Class used to pass stock price info from informer to investor
-public class StockPrice {
+public class StockPrice implements Serializable {
     private String symbol;
     private float currPrice;  // price at the current time
     private float hourPrice;  // price next hour

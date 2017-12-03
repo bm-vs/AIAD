@@ -146,9 +146,11 @@ public class InvestorAgent extends Agent implements Serializable {
             if (stockPrices != null) {
                 try {
                     HashMap<String, StockPrice> prices = (HashMap<String, StockPrice>) stockPrices.getContentObject();
-                    simpleSell(prices);
-                    simpleBuy(prices);
-                    updatePortfolioValue(prices);
+                    if (prices != null) {
+                        simpleSell(prices);
+                        simpleBuy(prices);
+                        updatePortfolioValue(prices);
+                    }
                 }
                 catch (Exception e) {
                     e.printStackTrace();
@@ -162,6 +164,7 @@ public class InvestorAgent extends Agent implements Serializable {
         }
 
         private void simpleSell(HashMap<String, StockPrice> prices) {
+            // TODO: sell according to skill and prices
             for (Iterator<Transaction> it = active.iterator(); it.hasNext(); ) {
                 Transaction t = it.next();
                 float currentPrice = prices.get(t.getStock()).getCurrPrice();
@@ -175,6 +178,7 @@ public class InvestorAgent extends Agent implements Serializable {
         }
 
         private void simpleBuy(HashMap<String, StockPrice> prices) {
+            // TODO: buy according to skill and prices
             float total = 0;
             HashMap<String, Float> growth = new HashMap<>();
             for (String s : prices.keySet()) {
