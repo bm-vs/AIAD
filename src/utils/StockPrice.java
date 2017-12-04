@@ -5,14 +5,16 @@ import java.io.Serializable;
 // Class used to pass stock price info from informer to investor
 public class StockPrice implements Serializable {
     private String symbol;
+    private int sector;
     private float currPrice;  // price at the current time
     private float hourPrice;  // price next hour
     private float dayPrice;   // price next day
     private float weekPrice;  // price next week
     private float monthPrice; // price next month
 
-    public StockPrice(String symbol, float currPrice, float hourPrice, float dayPrice, float weekPrice, float monthPrice) {
+    public StockPrice(String symbol, int sector, float currPrice, float hourPrice, float dayPrice, float weekPrice, float monthPrice) {
         this.symbol = symbol;
+        this.sector = sector;
         this.currPrice = currPrice;
         this.hourPrice = hourPrice;
         this.dayPrice = dayPrice;
@@ -22,6 +24,10 @@ public class StockPrice implements Serializable {
 
     public String getSymbol() {
         return symbol;
+    }
+
+    public int getSector() {
+        return sector;
     }
 
     public float getCurrPrice() {

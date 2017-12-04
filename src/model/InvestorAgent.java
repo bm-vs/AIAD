@@ -123,6 +123,7 @@ public class InvestorAgent extends Agent implements Serializable {
         }
 
         public void action() {
+            // Subscribe to informer agent to receive prices
             if (!subscribed) {
                 try {
                     ACLMessage subscribe = new ACLMessage(ACLMessage.SUBSCRIBE);
@@ -133,7 +134,7 @@ public class InvestorAgent extends Agent implements Serializable {
                     ACLMessage reply = receive();
                     if (reply != null && reply.getPerformative() == ACLMessage.AGREE) {
                         subscribed = true;
-                        //System.out.println(id + " subscribed ok");
+                        System.out.println(id + " subscribed ok");
                     }
                     block();
                 }
@@ -142,8 +143,9 @@ public class InvestorAgent extends Agent implements Serializable {
                 }
             }
 
+            // When new prices are received buy/sell/update portfolio value
             ACLMessage stockPrices = receive();
-            if (stockPrices != null) {
+            if (stockPrices != null && stockPrices.getPerformative() == ACLMessage.INFORM) {
                 try {
                     HashMap<String, StockPrice> prices = (HashMap<String, StockPrice>) stockPrices.getContentObject();
                     if (prices != null) {
@@ -225,16 +227,19 @@ public class InvestorAgent extends Agent implements Serializable {
         }
 
         @Override
+        public boolean equals(Object obj) {
+            return ((InvestorInfo) obj).getId().equals(this.id);
+        }
+
+        @Override
         public String toString() {
-            String s = id + "\n";
-
-            s += "telecom: " + skill.get(TELECOM) + "\n";
-            s += "financial: " + skill.get(FINANCIAL) + "\n";
-            s += "industrial: " + skill.get(INDUSTRIAL) + "\n";
-            s += "energy: " + skill.get(ENERGY) + "\n";
-            s += "healthcare: " + skill.get(HEALTHCARE) + "\n";
-            s += "tech: " + skill.get(TECH) + "\n";
-
+            String s = id + " - "
+                        + skill.get(TELECOM) + " "
+                        + skill.get(FINANCIAL) + " "
+                        + skill.get(INDUSTRIAL) + " "
+                        + skill.get(ENERGY) + " "
+                        + skill.get(HEALTHCARE) + " "
+                        + skill.get(TECH) + " ";
             return s;
         }
     }

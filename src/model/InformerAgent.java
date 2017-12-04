@@ -19,6 +19,9 @@ import utils.StockPrice;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.Random;
+
+import static utils.InvestorSettings.INVESTOR_MAX_SKILL;
 
 public class InformerAgent extends Agent {
     private Codec codec;
@@ -34,8 +37,6 @@ public class InformerAgent extends Agent {
         this.ticksPerHour = ticksPerHour;
         this.investors = new ArrayList<>();
     }
-
-
 
     @Override
     public void setup() {
@@ -72,10 +73,7 @@ public class InformerAgent extends Agent {
         }
     }
 
-
-
     // Behaviours
-
     private class InformerBroadcast extends SimpleBehaviour {
         private boolean finished = false;
         private int ticks;
@@ -86,20 +84,22 @@ public class InformerAgent extends Agent {
         }
 
         public void action() {
+            // Handle subscription of investors
             ACLMessage subscriptions = receive();
             if (subscriptions != null && subscriptions.getPerformative() == ACLMessage.SUBSCRIBE) {
                 try {
+                    // Save info about every investor
                     InvestorAgent.InvestorInfo investor = (InvestorAgent.InvestorInfo) subscriptions.getContentObject();
-                    investors.add(investor);
-                    //System.out.println(investor.getId() + " subscribed");
-                    //System.out.println(investors);
+                    if (!investors.contains(investor)) {
+                        investors.add(investor);
+                        System.out.println(investor + " subscribed");
 
-                    ACLMessage reply = subscriptions.createReply();
-                    reply.setPerformative(ACLMessage.AGREE);
-                    send(reply);
+                        ACLMessage reply = subscriptions.createReply();
+                        reply.setPerformative(ACLMessage.AGREE);
+                        send(reply);
+                    }
                 }
                 catch (Exception e) {
-                    e.printStackTrace();
                 }
             }
 
@@ -110,11 +110,15 @@ public class InformerAgent extends Agent {
                     ArrayList<StockPrice> prices = market.getPrices(currentTime);
 
                     for (InvestorAgent.InvestorInfo investor : investors) {
+                        // Create different predictions to every investor according to their skill level in that sector
                         HashMap<String, StockPrice> investorPrices = new HashMap<>();
                         for (StockPrice price: prices) {
-                            // TODO: for each investor change future prices to reflect their skill
-                            investorPrices.put(price.getSymbol(), price);
+                            int skill = investor.getSkill().get(price.getSector());
+                            StockPrice investorPrice = new StockPrice(price.getSymbol(), price.getSector(), price.getCurrPrice(), errorPrice(price.getHourPrice(), skill), errorPrice(price.getDayPrice(), skill), errorPrice(price.getWeekPrice(), skill), errorPrice(price.getMonthPrice(), skill));
+                            investorPrices.put(price.getSymbol(), investorPrice);
                         }
+
+                        // Send prices
                         ACLMessage stockPrices = new ACLMessage(ACLMessage.INFORM);
                         stockPrices.setContentObject(investorPrices);
                         stockPrices.addReceiver(new AID(investor.getId(), AID.ISLOCALNAME));
@@ -131,6 +135,21 @@ public class InformerAgent extends Agent {
                 ticks++;
             }
 
+        }
+
+        // Introduces error into prices according to skill
+        // The higher the skill the more accurate the return value is
+        private float errorPrice(float price, int skill) {
+            // Deciding if the value is over or under the real one
+            Random r = new Random();
+            int sign = r.nextInt(2);
+            if (sign == 0) {
+                sign = -1;
+            }
+
+            // Error is x% of price with x being inversely proportional to skill
+            float error = (INVESTOR_MAX_SKILL - skill + 1) * sign * 2 / 100f;
+            return price+price*error;
         }
 
         public boolean done() {

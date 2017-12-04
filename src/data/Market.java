@@ -41,6 +41,16 @@ public class Market {
         return nSectors;
     }
 
+    public Stock getStock(String symbol) {
+        for (Stock stock: stocks) {
+            if (symbol.equals(stock.getSymbol())) {
+                return stock;
+            }
+        }
+
+        return null;
+    }
+
     public Calendar getStartDate() {
         startDate.set(Calendar.HOUR_OF_DAY, openTime-1);
         return startDate;
@@ -62,7 +72,7 @@ public class Market {
         nextMonth.add(Calendar.MONTH, 1);
 
         for (Stock s: stocks) {
-            prices.add(new StockPrice(s.getSymbol(), s.getPrice(date), s.getPrice(nextHour), s.getPrice(nextDay), s.getPrice(nextWeek), s.getPrice(nextMonth)));
+            prices.add(new StockPrice(s.getSymbol(), s.getSector(), s.getPrice(date), s.getPrice(nextHour), s.getPrice(nextDay), s.getPrice(nextWeek), s.getPrice(nextMonth)));
         }
 
         return prices;
