@@ -105,8 +105,7 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 				String id = "Investor" + i;
 				ArrayList<Integer> skill = new ArrayList<>();
 				for (int j = 0; j < nSectors; j++) {
-				    skill.add(i*5);
-					//skill.add(r.nextInt(INVESTOR_MAX_SKILL));
+					skill.add(r.nextInt(INVESTOR_MAX_SKILL));
                 }
 
 				InvestorAgent agent = new InvestorAgent(id, initialCapital, skill, r.nextInt(N_PROFILES));

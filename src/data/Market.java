@@ -72,7 +72,7 @@ public class Market {
         nextMonth.add(Calendar.MONTH, 1);
 
         for (Stock s: stocks) {
-            prices.add(new StockPrice(s.getSymbol(), s.getSector(), s.getPrice(date), s.getPrice(nextHour), s.getPrice(nextDay), s.getPrice(nextWeek), s.getPrice(nextMonth)));
+            prices.add(new StockPrice(s.getSymbol(), s.getSector(), s.getPrice(date), getFuturePrice(nextHour, s), getFuturePrice(nextDay, s), getFuturePrice(nextWeek, s), getFuturePrice(nextMonth, s)));
         }
 
         return prices;
@@ -86,5 +86,25 @@ public class Market {
                 startDate = s.getStartDate();
             }
         }
+    }
+
+    // Get future price (ignore market closes)
+    private float getFuturePrice(Calendar date, Stock s) {
+        Calendar nextDate = (Calendar) date.clone();
+        boolean failed = true;
+        int timeout = 0;
+        float price = 0;
+        while (failed && timeout < 5) {
+            try {
+                price = s.getPrice(nextDate);
+                failed = false;
+            }
+            catch (Exception e) {
+                nextDate.add(Calendar.DAY_OF_YEAR, 1);
+                timeout++;
+                failed = true;
+            }
+        }
+        return price;
     }
 }

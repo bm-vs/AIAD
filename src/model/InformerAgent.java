@@ -14,8 +14,10 @@ import sajas.core.AID;
 import sajas.core.Agent;
 import sajas.core.behaviours.SimpleBehaviour;
 import sajas.domain.DFService;
+import utils.MarketSettings;
 import utils.StockPrice;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -128,7 +130,14 @@ public class InformerAgent extends Agent {
                 catch (Exception e) {
                 }
 
-                currentTime.add(Calendar.HOUR_OF_DAY, 1);
+                if (currentTime.get(Calendar.HOUR_OF_DAY) + 1 > MarketSettings.CLOSE_TIME) {
+                    currentTime.add(Calendar.HOUR_OF_DAY, 24-MarketSettings.CLOSE_TIME+MarketSettings.OPEN_TIME);
+                    SimpleDateFormat date = new SimpleDateFormat("yyyy-MM-dd");
+                    System.out.println(date.format(currentTime.getTime()));
+                }
+                else {
+                    currentTime.add(Calendar.HOUR_OF_DAY, 1);
+                }
                 ticks = 0;
             }
             else {

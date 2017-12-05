@@ -19,6 +19,13 @@ public class Transaction {
         this.done = false;
     }
 
+    public Transaction(String stockSymbol, float buyPrice, float askingPrice) {
+        this.stockSymbol = stockSymbol;
+        this.buyPrice = buyPrice;
+        this.quantity = 0;
+        this.done = false;
+    }
+
     // Get
     public String getStock() {
         return stockSymbol;
@@ -51,5 +58,17 @@ public class Transaction {
 
     public void closeTransaction() {
         this.done = true;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof String) {
+            return this.stockSymbol.equals(obj);
+        }
+        else if (obj instanceof Transaction){
+            return this.stockSymbol.equals(((Transaction) obj).getStock());
+        }
+
+        return false;
     }
 }

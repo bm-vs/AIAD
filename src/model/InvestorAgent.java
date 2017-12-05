@@ -16,11 +16,10 @@ import sajas.domain.DFService;
 import utils.StockPrice;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
+import java.util.*;
 
 import static utils.MarketSettings.*;
+import static utils.InvestorSettings.*;
 
 public class InvestorAgent extends Agent implements Serializable {
     private Codec codec;
@@ -74,7 +73,6 @@ public class InvestorAgent extends Agent implements Serializable {
         }
     }
 
-
     @Override
     public void setup() {
         // register language and ontology
@@ -127,7 +125,7 @@ public class InvestorAgent extends Agent implements Serializable {
             if (!subscribed) {
                 try {
                     ACLMessage subscribe = new ACLMessage(ACLMessage.SUBSCRIBE);
-                    subscribe.setContentObject(new InvestorInfo(agent.getId(), agent.getSkill()));
+                    subscribe.setContentObject(new InvestorInfo(agent.getId(), agent.getProfile(), agent.getSkill()));
                     subscribe.addReceiver(new AID("Informer", AID.ISLOCALNAME));
                     send(subscribe);
 
@@ -136,7 +134,6 @@ public class InvestorAgent extends Agent implements Serializable {
                         subscribed = true;
                         System.out.println(id + " subscribed ok");
                     }
-                    block();
                 }
                 catch (Exception e) {
                     e.printStackTrace();
@@ -149,8 +146,7 @@ public class InvestorAgent extends Agent implements Serializable {
                 try {
                     HashMap<String, StockPrice> prices = (HashMap<String, StockPrice>) stockPrices.getContentObject();
                     if (prices != null) {
-                        simpleSell(prices);
-                        simpleBuy(prices);
+                        moveStock(prices);
                         updatePortfolioValue(prices);
                     }
                 }
@@ -158,19 +154,53 @@ public class InvestorAgent extends Agent implements Serializable {
                     e.printStackTrace();
                 }
             }
-            block();
         }
 
         public boolean done() {
             return finished;
         }
 
-        private void simpleSell(HashMap<String, StockPrice> prices) {
-            // TODO: sell according to skill and prices
+        // Buys/sells stock according to current prices and predicted prices
+        private void moveStock(HashMap<String, StockPrice> prices) {
+            sellAll(prices);
+
+            // Get top growth stock
+            ArrayList<StockPrice> predictedGrowth = new ArrayList<>();
+            for (StockPrice price: prices.values()) {
+                float estimated = price.getHourPrice()*PROFILE[profile][HOUR_PRICE]+
+                                    price.getDayPrice()*PROFILE[profile][DAY_PRICE]+
+                                    price.getWeekPrice()*PROFILE[profile][WEEK_PRICE]+
+                                    price.getMonthPrice()*PROFILE[profile][MONTH_PRICE];
+                price.setEstimatedPrice(estimated);
+                predictedGrowth.add(price);
+            }
+            Collections.sort(predictedGrowth, new StockPrice.StockPriceComparator());
+            Collections.reverse(predictedGrowth);
+
+            // TODO Implement portfolio distribution methods
+            Random r = new Random();
+            int nStocks = 6;
+            int i = 0;
+            float amountPerStock = capital/nStocks; // invest in 6 stocks
+            for (StockPrice price: predictedGrowth) {
+                // The probability to invest in a stock is higher if the investor has more knowledge of that stock's sector
+                if (skill.get(price.getSector()) > r.nextInt(INVESTOR_MAX_SKILL) && i < nStocks) {
+                    int quantity = (int)(amountPerStock/price.getCurrPrice());
+                    if (quantity > 0) {
+                        Transaction t = new Transaction(price.getSymbol(), price.getCurrPrice(), quantity);
+                        active.add(t);
+                        capital -= price.getCurrPrice() * quantity;
+                    }
+                    i++;
+                }
+            }
+        }
+
+        // Liquidates all open positions
+        private void sellAll(HashMap<String, StockPrice> prices) {
             for (Iterator<Transaction> it = active.iterator(); it.hasNext(); ) {
                 Transaction t = it.next();
                 float currentPrice = prices.get(t.getStock()).getCurrPrice();
-
                 t.setSellPrice(currentPrice);
                 t.closeTransaction();
                 closed.add(t);
@@ -178,48 +208,26 @@ public class InvestorAgent extends Agent implements Serializable {
                 capital += t.getQuantity()*currentPrice;
             }
         }
-
-        private void simpleBuy(HashMap<String, StockPrice> prices) {
-            // TODO: buy according to skill and prices
-            float total = 0;
-            HashMap<String, Float> growth = new HashMap<>();
-            for (String s : prices.keySet()) {
-                StockPrice p = prices.get(s);
-                float g = (p.getDayPrice()-p.getCurrPrice())/p.getCurrPrice();
-                growth.put(s, g);
-                if (g > 0) {
-                    total += g;
-                }
-            }
-
-            for (String s: prices.keySet()) {
-                float g = growth.get(s);
-                if (g > 0) {
-                    float amountPerStock = capital*g/total;
-                    float price = prices.get(s).getCurrPrice();
-                    int quantity = Math.round(amountPerStock / price);
-                    if (quantity > 0) {
-                        Transaction t = new Transaction(s, price, quantity);
-                        active.add(t);
-                        capital -= price * quantity;
-                    }
-                }
-            }
-        }
     }
 
     public class InvestorInfo implements Serializable {
 
         private String id;
+        private int profile;
         private ArrayList<Integer> skill;
 
-        public InvestorInfo(String id, ArrayList<Integer> skill) {
+        public InvestorInfo(String id, int profile, ArrayList<Integer> skill) {
             this.id = id;
             this.skill = skill;
+            this.profile = profile;
         }
 
         public String getId() {
             return id;
+        }
+
+        public int getProfile() {
+            return profile;
         }
 
         public ArrayList<Integer> getSkill() {
@@ -234,6 +242,7 @@ public class InvestorAgent extends Agent implements Serializable {
         @Override
         public String toString() {
             String s = id + " - "
+                        + profile + " - "
                         + skill.get(TELECOM) + " "
                         + skill.get(FINANCIAL) + " "
                         + skill.get(INDUSTRIAL) + " "
