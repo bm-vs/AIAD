@@ -31,6 +31,8 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 	private InformerAgent informer;
 	private List<InvestorAgent> investors;
 
+	private List<InvestorAgent> paramInvestors; // used to do custom simulations with investors with specific traits
+
 	// Simulation paramaters
 	private int nInvestors = 1;
 	private float initialCapital = 10000;
@@ -40,6 +42,12 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 	public Repast3InvestingLauncher() {
 		super();
 		market = new Market(MarketSettings.OPEN_TIME, MarketSettings.CLOSE_TIME);
+	}
+
+	public Repast3InvestingLauncher(List<InvestorAgent> investors) {
+		super();
+		market = new Market(MarketSettings.OPEN_TIME, MarketSettings.CLOSE_TIME);
+		paramInvestors = investors;
 	}
 
 	public int getNInvestors() {
@@ -100,17 +108,25 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 		
 		try {
 			// Create investors
-            Random r = new Random();
-			for (int i = 0; i < nInvestors; i++) {
-				String id = "Investor" + i;
-				ArrayList<Integer> skill = new ArrayList<>();
-				for (int j = 0; j < nSectors; j++) {
-					skill.add(r.nextInt(INVESTOR_MAX_SKILL));
-                }
+			if (paramInvestors != null && paramInvestors.size() != 0) {
+				for (InvestorAgent investor: investors) {
+					agentContainer.acceptNewAgent(investor.getId(), investor).start();
+					investors.add(investor);
+				}
+			}
+			else {
+				Random r = new Random();
+				for (int i = 0; i < nInvestors; i++) {
+					String id = "Investor" + i;
+					ArrayList<Integer> skill = new ArrayList<>();
+					for (int j = 0; j < nSectors; j++) {
+						skill.add(r.nextInt(INVESTOR_MAX_SKILL));
+					}
 
-				InvestorAgent agent = new InvestorAgent(id, initialCapital, skill, r.nextInt(N_PROFILES));
-				agentContainer.acceptNewAgent(id, agent).start();
-				investors.add(agent);
+					InvestorAgent agent = new InvestorAgent(id, initialCapital, skill, r.nextInt(N_PROFILES));
+					agentContainer.acceptNewAgent(id, agent).start();
+					investors.add(agent);
+				}
 			}
 
 			// Create informer agent
