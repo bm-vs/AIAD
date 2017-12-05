@@ -1,5 +1,8 @@
 package model;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -31,23 +34,16 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 	private InformerAgent informer;
 	private List<InvestorAgent> investors;
 
-	private List<InvestorAgent> paramInvestors; // used to do custom simulations with investors with specific traits
-
 	// Simulation paramaters
 	private int nInvestors = 1;
 	private float initialCapital = 10000;
 	private int ticksPerHour = 10;
 	private boolean detailedInfo = true;
+	private String customInvestors = "test1";
 
 	public Repast3InvestingLauncher() {
 		super();
 		market = new Market(MarketSettings.OPEN_TIME, MarketSettings.CLOSE_TIME);
-	}
-
-	public Repast3InvestingLauncher(List<InvestorAgent> investors) {
-		super();
-		market = new Market(MarketSettings.OPEN_TIME, MarketSettings.CLOSE_TIME);
-		paramInvestors = investors;
 	}
 
 	public int getNInvestors() {
@@ -66,6 +62,8 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 	    return detailedInfo;
 	}
 
+	public String getCustomInvestors() { return customInvestors; }
+
 	public void setNInvestors(int n) {
 		nInvestors = n;
 	}
@@ -82,9 +80,11 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 	    detailedInfo = b;
 	}
 
+	public void setCustomInvestors(String s) { customInvestors = s; }
+
 	@Override
 	public String[] getInitParam() {
-		return new String[] {"nInvestors", "initialCapital", "ticksPerHour", "detailedInfo"};
+		return new String[] {"nInvestors", "initialCapital", "ticksPerHour", "detailedInfo", "customInvestors"};
 	}
 
 	@Override
@@ -108,13 +108,15 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 		
 		try {
 			// Create investors
-			if (paramInvestors != null && paramInvestors.size() != 0) {
-				for (InvestorAgent investor: investors) {
-					agentContainer.acceptNewAgent(investor.getId(), investor).start();
-					investors.add(investor);
-				}
-			}
-			else {
+            boolean custom = readCustomFile();
+            if (custom) {
+                System.out.println("Custom Investors");
+                for (InvestorAgent agent: investors) {
+                    agentContainer.acceptNewAgent(agent.getId(), agent).start();
+                }
+            }
+			if (!custom) {
+                System.out.println("Random Investors");
 				Random r = new Random();
 				for (int i = 0; i < nInvestors; i++) {
 					String id = "Investor" + i;
@@ -154,18 +156,18 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 
 		for (int i = 0; i < investors.size(); i++) {
 			InvestorAgent agent = investors.get(i);
-			plot.addSequence("Total " + i, new Sequence() {
+			plot.addSequence(agent.getId() + "(T)", new Sequence() {
 				public double getSValue() {
 					return agent.getTotalCapital();
 				}
 			});
 			if (detailedInfo) {
-				plot.addSequence("Cash " + i, new Sequence() {
+				plot.addSequence(agent.getId() + "(C)", new Sequence() {
 					public double getSValue() {
 						return agent.getCapital();
 					}
 				});
-				plot.addSequence("Portfolio " + i, new Sequence() {
+				plot.addSequence(agent.getId() + "(P)", new Sequence() {
 					public double getSValue() {
 						return agent.getPortfolioValue();
 					}
@@ -177,6 +179,39 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 		getSchedule().scheduleActionAtInterval(100, plot, "step", Schedule.LAST);
 	}
 
+	// Reads investor type file using customInvestors
+	private boolean readCustomFile() {
+        try {
+            ArrayList<InvestorAgent> custom = new ArrayList<>();
+
+            File file = new File("test/" + customInvestors + ".txt");
+            FileReader fileReader = new FileReader(file);
+            BufferedReader bufferedReader = new BufferedReader(fileReader);
+            StringBuffer stringBuffer = new StringBuffer();
+
+            String line;
+            while ((line = bufferedReader.readLine()) != null) {
+                String[] info = line.split("-");
+                String id = info[0];
+                float capital = Float.parseFloat(info[1]);
+                String[] skillString = info[2].split(";");
+                ArrayList<Integer> skill = new ArrayList<>();
+                for (String s: skillString) {
+                    skill.add(Integer.parseInt(s));
+                }
+                int profile = Integer.parseInt(info[3]);
+
+                custom.add(new InvestorAgent(id, capital, skill, profile));
+            }
+            fileReader.close();
+            investors = custom;
+        }
+        catch (Exception e) {
+            return false;
+        }
+
+	    return true;
+    }
 
 	/**
 	 * Launching Repast3

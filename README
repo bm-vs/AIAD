@@ -1,2 +1,5 @@
 Get historical data at:
 http://finance.google.com/finance/historical?output=csv&q=SYMBOL
+
+Test file format:
+[id]-[initalCapital]-[skillTELECOM(0-10)].[skillFINANCIAL].[skillINDUSTRIAL].[skillENERGY].[skillHEALTHCARE].[skillTECH]-[profile(0-2)]
