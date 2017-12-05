@@ -148,6 +148,7 @@ public class InformerAgent extends Agent {
 
         // Introduces error into prices according to skill
         // The higher the skill the more accurate the return value is
+        // TODO better error generator
         private float errorPrice(float price, int skill) {
             // Deciding if the value is over or under the real one
             Random r = new Random();

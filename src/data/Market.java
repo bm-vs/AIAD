@@ -89,6 +89,7 @@ public class Market {
     }
 
     // Get future price (ignore market closes)
+    // TODO return general price (top/close of month/week/day) instead of exact price at future hour
     private float getFuturePrice(Calendar date, Stock s) {
         Calendar nextDate = (Calendar) date.clone();
         boolean failed = true;
