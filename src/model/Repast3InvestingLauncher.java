@@ -37,9 +37,9 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 	// Simulation paramaters
 	private int nInvestors = 1;
 	private float initialCapital = 10000;
-	private int ticksPerHour = 10;
-	private boolean detailedInfo = true;
-	private String customInvestors = "test1";
+	private int ticksPerHour = 5;
+	private boolean detailedInfo = false;
+	private String customInvestors = "";
 
 	public Repast3InvestingLauncher() {
 		super();
