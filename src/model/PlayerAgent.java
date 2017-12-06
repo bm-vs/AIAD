@@ -26,12 +26,9 @@ public class PlayerAgent {
     private float capital;
     private float portfolioValue;
 
-    public PlayerAgent(String id, float initialCapital)
-    {
+    public PlayerAgent(String id, float initialCapital) {
       this.id = id;
       this.capital = initialCapital;
-      this.active = new ArrayList<>();
-      this.closed = new ArrayList<>();
     }
 
     public String getId() {
@@ -49,10 +46,4 @@ public class PlayerAgent {
     public float getTotalCapital() {
         return capital + portfolioValue;
     }
-
-    public int getProfile() {
-        return profile;
-    }
-
-
 }
