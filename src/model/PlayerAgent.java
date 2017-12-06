@@ -18,7 +18,7 @@ import utils.StockPrice;
 import java.io.Serializable;
 import java.util.*;
 
-public class PlayerAgent {
+public class PlayerAgent extends Agent implements  Serializable{
 
     private Codec codec;
     private Ontology serviceOntology;
@@ -45,5 +45,50 @@ public class PlayerAgent {
 
     public float getTotalCapital() {
         return capital + portfolioValue;
+    }
+
+    @Override
+    public void setup(){
+        // register language and ontology
+        codec = new SLCodec();
+        serviceOntology = ServiceOntology.getInstance();
+        getContentManager().registerLanguage(codec);
+        getContentManager().registerOntology(serviceOntology);
+
+        // register provider at DF
+        DFAgentDescription dfd = new DFAgentDescription();
+        dfd.setName(getAID());
+        dfd.addProtocols(FIPANames.InteractionProtocol.FIPA_CONTRACT_NET);
+        ServiceDescription sd = new ServiceDescription();
+        sd.setName(getLocalName() + "-service-provider");
+        sd.setType("service-provider");
+        dfd.addServices(sd);
+        try {
+            DFService.register(this, dfd);
+        } catch (FIPAException e) {
+            System.err.println(e.getMessage());
+        }
+    }
+
+    @Override
+    protected void takeDown() {
+        try {
+            DFService.deregister(this);
+        } catch (FIPAException e) {
+            e.printStackTrace();
+        }
+    }
+
+    //Behaviours
+    private class PlayerTrade extends SimpleBehaviour {
+        private boolean finished = false;
+
+        public void action(){
+
+        }
+
+        public boolean done(){
+            return finished;
+        }
     }
 }
