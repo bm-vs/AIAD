@@ -7,20 +7,17 @@ import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.domain.FIPAException;
 import jade.domain.FIPANames;
-import jade.lang.acl.ACLMessage;
-import model.onto.ServiceOntology;
-import sajas.core.AID;
+import model.onto.StockMarketOntology;
 import sajas.core.Agent;
 import sajas.core.behaviours.SimpleBehaviour;
 import sajas.domain.DFService;
-import utils.StockPrice;
 
 import java.io.Serializable;
 import java.util.*;
 
 public class PlayerAgent extends Agent implements  Serializable{
     private Codec codec;
-    private Ontology serviceOntology;
+    private Ontology stockMarketOntology;
     private String id;
     private HashMap<String, InvestorTrust> investorTrust; // save trust associated with every investor id
     private float investedAmount; // amount sent to investor
@@ -61,9 +58,9 @@ public class PlayerAgent extends Agent implements  Serializable{
     public void setup(){
         // register language and ontology
         codec = new SLCodec();
-        serviceOntology = ServiceOntology.getInstance();
+        stockMarketOntology = StockMarketOntology.getInstance();
         getContentManager().registerLanguage(codec);
-        getContentManager().registerOntology(serviceOntology);
+        getContentManager().registerOntology(stockMarketOntology);
 
         // register provider at DF
         DFAgentDescription dfd = new DFAgentDescription();

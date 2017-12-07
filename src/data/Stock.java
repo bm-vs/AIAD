@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.util.ArrayList;
 import java.util.Calendar;
 
+import utils.DateNotFoundException;
 import static utils.Utils.calendarBuilder;
 import static utils.Utils.stringToDate;
 
@@ -46,14 +47,14 @@ public class Stock {
         return sector;
     }
 
-    public Float getPrice(Calendar date) throws Exception {
+    public Float getPrice(Calendar date) throws DateNotFoundException {
         for (Day d: days) {
             if (d.getDate().get(Calendar.DAY_OF_YEAR) == date.get(Calendar.DAY_OF_YEAR)) {
                 return d.getPrice(date);
             }
         }
 
-        throw new Exception("Date not found");
+        throw new DateNotFoundException();
     }
 
     // Read each day from CSV file, update start date

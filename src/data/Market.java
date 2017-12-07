@@ -5,9 +5,9 @@ import utils.StockPrice;
 import java.util.ArrayList;
 import java.util.Calendar;
 
-import static utils.MarketSettings.BASIC_SECTOR_COUNT;
+import utils.DateNotFoundException;
 import static utils.Utils.calendarBuilder;
-import static utils.MarketSettings.getStockBasicList;
+import static utils.Settings.*;
 
 public class Market {
     private int openTime;
@@ -59,20 +59,14 @@ public class Market {
     // Get current and future prices of all stocks at a given time
     // @param: Calendar with year, month, day and hour
     // @returns: hashmap{stock symbol, stockprice}
-    public ArrayList<StockPrice> getPrices(Calendar date) throws Exception {
+    public ArrayList<StockPrice> getPrices(Calendar date) throws DateNotFoundException {
         ArrayList<StockPrice> prices = new ArrayList<>();
 
         Calendar nextHour = (Calendar) date.clone();
         nextHour.add(Calendar.HOUR_OF_DAY, 1);
-        Calendar nextDay = (Calendar) date.clone();
-        nextDay.add(Calendar.DAY_OF_YEAR, 1);
-        Calendar nextWeek = (Calendar) date.clone();
-        nextWeek.add(Calendar.WEEK_OF_YEAR, 1);
-        Calendar nextMonth = (Calendar) date.clone();
-        nextMonth.add(Calendar.MONTH, 1);
 
         for (Stock s: stocks) {
-            prices.add(new StockPrice(s.getSymbol(), s.getSector(), s.getPrice(date), getFuturePrice(nextHour, s), getFuturePrice(nextDay, s), getFuturePrice(nextWeek, s), getFuturePrice(nextMonth, s)));
+            prices.add(new StockPrice(s.getSymbol(), s.getSector(), s.getPrice(date), getFuturePrice(nextHour, s)));
         }
 
         return prices;
@@ -89,7 +83,6 @@ public class Market {
     }
 
     // Get future price (ignore market closes)
-    // TODO return general price (top/close of month/week/day) instead of exact price at future hour
     private float getFuturePrice(Calendar date, Stock s) {
         Calendar nextDate = (Calendar) date.clone();
         boolean failed = true;
@@ -100,7 +93,7 @@ public class Market {
                 price = s.getPrice(nextDate);
                 failed = false;
             }
-            catch (Exception e) {
+            catch (DateNotFoundException e) {
                 nextDate.add(Calendar.DAY_OF_YEAR, 1);
                 timeout++;
                 failed = true;

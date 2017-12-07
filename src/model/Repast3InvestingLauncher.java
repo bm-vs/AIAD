@@ -19,10 +19,8 @@ import uchicago.src.sim.analysis.OpenSequenceGraph;
 import uchicago.src.sim.analysis.Sequence;
 import uchicago.src.sim.engine.Schedule;
 import uchicago.src.sim.engine.SimInit;
-import utils.MarketSettings;
 
-import static utils.InvestorSettings.INVESTOR_MAX_SKILL;
-import static utils.InvestorSettings.N_PROFILES;
+import static utils.Settings.*;
 
 public class Repast3InvestingLauncher extends Repast3Launcher {
 	private ContainerController mainContainer;
@@ -37,13 +35,12 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 	// Simulation paramaters
 	private int nInvestors = 1;
 	private float initialCapital = 10000;
-	private int ticksPerHour = 5;
 	private boolean detailedInfo = false;
 	private String customInvestors = "";
 
 	public Repast3InvestingLauncher() {
 		super();
-		market = new Market(MarketSettings.OPEN_TIME, MarketSettings.CLOSE_TIME);
+		market = new Market(OPEN_TIME, CLOSE_TIME);
 	}
 
 	public int getNInvestors() {
@@ -52,10 +49,6 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 
 	public float getInitialCapital() {
 		return initialCapital;
-	}
-
-	public int getTicksPerHour() {
-	    return ticksPerHour;
 	}
 
 	public boolean getDetailedInfo() {
@@ -72,10 +65,6 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 		initialCapital = n;
 	}
 
-	public void setTicksPerHour(int n) {
-        ticksPerHour = n;
-    }
-
 	public void setDetailedInfo(boolean b) {
 	    detailedInfo = b;
 	}
@@ -84,7 +73,7 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 
 	@Override
 	public String[] getInitParam() {
-		return new String[] {"nInvestors", "initialCapital", "ticksPerHour", "detailedInfo", "customInvestors"};
+		return new String[] {"nInvestors", "initialCapital", "detailedInfo", "customInvestors"};
 	}
 
 	@Override
@@ -125,14 +114,14 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 						skill.add(r.nextInt(INVESTOR_MAX_SKILL));
 					}
 
-					InvestorAgent agent = new InvestorAgent(id, initialCapital, skill, r.nextInt(N_PROFILES));
+					InvestorAgent agent = new InvestorAgent(id, initialCapital, skill);
 					agentContainer.acceptNewAgent(id, agent).start();
 					investors.add(agent);
 				}
 			}
 
 			// Create informer agent
-			informer = new InformerAgent(market, ticksPerHour);
+			informer = new InformerAgent(market);
 			agentContainer.acceptNewAgent("Informer", informer).start();
 		}
 		catch (StaleProxyException e) {
@@ -187,8 +176,6 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
             File file = new File("test/" + customInvestors + ".txt");
             FileReader fileReader = new FileReader(file);
             BufferedReader bufferedReader = new BufferedReader(fileReader);
-            StringBuffer stringBuffer = new StringBuffer();
-
             String line;
             while ((line = bufferedReader.readLine()) != null) {
                 String[] info = line.split("-");
@@ -199,9 +186,8 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
                 for (String s: skillString) {
                     skill.add(Integer.parseInt(s));
                 }
-                int profile = Integer.parseInt(info[3]);
 
-                custom.add(new InvestorAgent(id, capital, skill, profile));
+                custom.add(new InvestorAgent(id, capital, skill));
             }
             fileReader.close();
             investors = custom;

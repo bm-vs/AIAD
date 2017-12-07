@@ -4,12 +4,12 @@ import jade.content.onto.BeanOntology;
 import jade.content.onto.BeanOntologyException;
 import jade.content.onto.Ontology;
 
-public class ServiceOntology extends BeanOntology {
+public class StockMarketOntology extends BeanOntology {
 	private static final long serialVersionUID = 1L;
 	public static final String ONTOLOGY_NAME = "alter-ego";
 	
 	// Singleton instance of this ontology
-	private static Ontology theInstance = new ServiceOntology();
+	private static Ontology theInstance = new StockMarketOntology();
 	
 	// Method to access the singleton ontology object
 	public static Ontology getInstance() {
@@ -17,7 +17,7 @@ public class ServiceOntology extends BeanOntology {
 	}
 	
 	// Private constructor
-	private ServiceOntology() {
+	private StockMarketOntology() {
 		super(ONTOLOGY_NAME);
 		
 		try {

@@ -4,7 +4,14 @@ import data.Stock;
 
 import java.util.ArrayList;
 
-public final class MarketSettings {
+public class Settings {
+    // Investor agent
+    public static final int INVESTOR_MAX_SKILL = 11;
+    public static final int PORTFOLIO_SIZE = 10;
+
+    // Informer agent
+    public static final int TICK_PERIOD = 100;
+
     // Market times
     public static final int OPEN_TIME = 9;
     public static final int CLOSE_TIME = 16;

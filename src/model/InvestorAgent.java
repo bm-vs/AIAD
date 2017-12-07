@@ -8,22 +8,20 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.domain.FIPAException;
 import jade.domain.FIPANames;
 import jade.lang.acl.ACLMessage;
-import model.onto.ServiceOntology;
+import model.onto.StockMarketOntology;
 import sajas.core.AID;
 import sajas.core.Agent;
 import sajas.core.behaviours.SimpleBehaviour;
 import sajas.domain.DFService;
 import utils.StockPrice;
+import static utils.Settings.*;
 
 import java.io.Serializable;
 import java.util.*;
 
-import static utils.MarketSettings.*;
-import static utils.InvestorSettings.*;
-
 public class InvestorAgent extends Agent implements Serializable {
     private Codec codec;
-    private Ontology serviceOntology;
+    private Ontology stockMarketOntology;
     private ArrayList<Transaction> active;
     private ArrayList<Transaction> closed;
     private String id;
@@ -32,7 +30,7 @@ public class InvestorAgent extends Agent implements Serializable {
     private ArrayList<Integer> skill; // represents the knowledge (0-10) of each sector (0-5)
     private int profile;
 
-    public InvestorAgent(String id, float initialCapital, ArrayList<Integer> skill, int profile) {
+    public InvestorAgent(String id, float initialCapital, ArrayList<Integer> skill) {
         this.id = id;
         this.capital = initialCapital;
         this.skill = skill;
@@ -77,16 +75,16 @@ public class InvestorAgent extends Agent implements Serializable {
     public void setup() {
         // register language and ontology
         codec = new SLCodec();
-        serviceOntology = ServiceOntology.getInstance();
+        stockMarketOntology = StockMarketOntology.getInstance();
         getContentManager().registerLanguage(codec);
-        getContentManager().registerOntology(serviceOntology);
+        getContentManager().registerOntology(stockMarketOntology);
 
         // register provider at DF
         DFAgentDescription dfd = new DFAgentDescription();
         dfd.setName(getAID());
         dfd.addProtocols(FIPANames.InteractionProtocol.FIPA_CONTRACT_NET);
         ServiceDescription sd = new ServiceDescription();
-        sd.setName(getLocalName() + "-service-provider");
+        sd.setName(getLocalName() + "-investor");
         sd.setType("investor");
         dfd.addServices(sd);
         try {
@@ -167,10 +165,7 @@ public class InvestorAgent extends Agent implements Serializable {
             // Get top growth stock
             ArrayList<StockPrice> predictedGrowth = new ArrayList<>();
             for (StockPrice price: prices.values()) {
-                float estimated = price.getHourPrice()*PROFILE[profile][HOUR_PRICE]+
-                                    price.getDayPrice()*PROFILE[profile][DAY_PRICE]+
-                                    price.getWeekPrice()*PROFILE[profile][WEEK_PRICE]+
-                                    price.getMonthPrice()*PROFILE[profile][MONTH_PRICE];
+                float estimated = price.getHourPrice();
                 price.setEstimatedPrice(estimated);
                 predictedGrowth.add(price);
             }

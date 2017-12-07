@@ -9,34 +9,33 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.domain.FIPAException;
 import jade.domain.FIPANames;
 import jade.lang.acl.ACLMessage;
-import model.onto.ServiceOntology;
+import jade.lang.acl.MessageTemplate;
+import model.onto.StockMarketOntology;
 import sajas.core.AID;
 import sajas.core.Agent;
-import sajas.core.behaviours.SimpleBehaviour;
+import sajas.core.behaviours.CyclicBehaviour;
+import sajas.core.behaviours.TickerBehaviour;
 import sajas.domain.DFService;
-import utils.MarketSettings;
+import utils.DateNotFoundException;
 import utils.StockPrice;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
-import java.util.Random;
 
-import static utils.InvestorSettings.INVESTOR_MAX_SKILL;
+import static utils.Settings.*;
 
 public class InformerAgent extends Agent {
     private Codec codec;
-    private Ontology serviceOntology;
+    private Ontology stockMarketOntology;
     private Market market;
     private Calendar currentTime;
-    private int ticksPerHour;
     private ArrayList<InvestorAgent.InvestorInfo> investors;
 
-    public InformerAgent(Market market, int ticksPerHour) {
+    public InformerAgent(Market market) {
         this.market = market;
         this.currentTime = market.getStartDate();
-        this.ticksPerHour = ticksPerHour;
         this.investors = new ArrayList<>();
     }
 
@@ -44,16 +43,16 @@ public class InformerAgent extends Agent {
     public void setup() {
         // register language and ontology
         codec = new SLCodec();
-        serviceOntology = ServiceOntology.getInstance();
+        stockMarketOntology = StockMarketOntology.getInstance();
         getContentManager().registerLanguage(codec);
-        getContentManager().registerOntology(serviceOntology);
+        getContentManager().registerOntology(stockMarketOntology);
 
         // register provider at DF
         DFAgentDescription dfd = new DFAgentDescription();
         dfd.setName(getAID());
         dfd.addProtocols(FIPANames.InteractionProtocol.FIPA_CONTRACT_NET);
         ServiceDescription sd = new ServiceDescription();
-        sd.setName(getLocalName() + "-service-provider");
+        sd.setName(getLocalName() + "-informer");
         sd.setType("informer");
         dfd.addServices(sd);
         try {
@@ -63,6 +62,7 @@ public class InformerAgent extends Agent {
         }
 
         // Behaviours
+        addBehaviour(new InformerSubscribe(this));
         addBehaviour(new InformerBroadcast(this));
     }
 
@@ -76,19 +76,18 @@ public class InformerAgent extends Agent {
     }
 
     // Behaviours
-    private class InformerBroadcast extends SimpleBehaviour {
-        private boolean finished = false;
-        private int ticks;
-
-        public InformerBroadcast(Agent a) {
+    private class InformerSubscribe extends CyclicBehaviour {
+        public InformerSubscribe(Agent a) {
             super(a);
-            ticks = 0;
         }
 
         public void action() {
+            // Only accept subscribe messages
+            MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.SUBSCRIBE);
+
             // Handle subscription of investors
-            ACLMessage subscriptions = receive();
-            if (subscriptions != null && subscriptions.getPerformative() == ACLMessage.SUBSCRIBE) {
+            ACLMessage subscriptions = receive(mt);
+            if (subscriptions != null) {
                 try {
                     // Save info about every investor
                     InvestorAgent.InvestorInfo investor = (InvestorAgent.InvestorInfo) subscriptions.getContentObject();
@@ -100,66 +99,63 @@ public class InformerAgent extends Agent {
                         reply.setPerformative(ACLMessage.AGREE);
                         send(reply);
                     }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-                catch (Exception e) {
+            }
+        }
+    }
+
+    private class InformerBroadcast extends TickerBehaviour {
+        public InformerBroadcast(Agent a) {
+            super(a, TICK_PERIOD);
+        }
+
+        public void onTick() {
+            // Sends stock prices to every investor
+            boolean dayNotFound = false;
+            try {
+                ArrayList<StockPrice> prices = market.getPrices(currentTime);
+
+                for (InvestorAgent.InvestorInfo investor : investors) {
+                    // Create different predictions to every investor according to their skill level in that sector
+                    HashMap<String, StockPrice> investorPrices = new HashMap<>();
+                    for (StockPrice price: prices) {
+                        int skill = investor.getSkill().get(price.getSector());
+                        StockPrice investorPrice = new StockPrice(price.getSymbol(), price.getSector(), price.getCurrPrice(), price.getHourPrice());
+                        investorPrice.addError(skill);
+                        investorPrices.put(price.getSymbol(), investorPrice);
+                    }
+
+                    // Send prices
+                    ACLMessage stockPrices = new ACLMessage(ACLMessage.INFORM);
+                    stockPrices.setContentObject(investorPrices);
+                    stockPrices.addReceiver(new AID(investor.getId(), AID.ISLOCALNAME));
+                    send(stockPrices);
+                }
+            }
+            catch (Exception e) {
+                if (e instanceof DateNotFoundException) {
+                    dayNotFound = true;
                 }
             }
 
-            // Update current date
-            if (ticks == ticksPerHour) {
-                // Sends stock prices to every investor
-                try {
-                    ArrayList<StockPrice> prices = market.getPrices(currentTime);
-
-                    for (InvestorAgent.InvestorInfo investor : investors) {
-                        // Create different predictions to every investor according to their skill level in that sector
-                        HashMap<String, StockPrice> investorPrices = new HashMap<>();
-                        for (StockPrice price: prices) {
-                            int skill = investor.getSkill().get(price.getSector());
-                            StockPrice investorPrice = new StockPrice(price.getSymbol(), price.getSector(), price.getCurrPrice(), errorPrice(price.getHourPrice(), skill), errorPrice(price.getDayPrice(), skill), errorPrice(price.getWeekPrice(), skill), errorPrice(price.getMonthPrice(), skill));
-                            investorPrices.put(price.getSymbol(), investorPrice);
-                        }
-
-                        // Send prices
-                        ACLMessage stockPrices = new ACLMessage(ACLMessage.INFORM);
-                        stockPrices.setContentObject(investorPrices);
-                        stockPrices.addReceiver(new AID(investor.getId(), AID.ISLOCALNAME));
-                        send(stockPrices);
-                    }
-                }
-                catch (Exception e) {
-                }
-
-                if (currentTime.get(Calendar.HOUR_OF_DAY) + 1 > MarketSettings.CLOSE_TIME) {
-                    currentTime.add(Calendar.HOUR_OF_DAY, 24-MarketSettings.CLOSE_TIME+MarketSettings.OPEN_TIME);
-                    SimpleDateFormat date = new SimpleDateFormat("yyyy-MM-dd");
-                    System.out.println(date.format(currentTime.getTime()));
+            if (currentTime.get(Calendar.HOUR_OF_DAY) + 1 > CLOSE_TIME) {
+                currentTime.add(Calendar.HOUR_OF_DAY, 24-CLOSE_TIME+OPEN_TIME);
+                SimpleDateFormat date = new SimpleDateFormat("yyyy-MM-dd");
+                System.out.print(date.format(currentTime.getTime()));
+                if (dayNotFound) {
+                    System.out.println(" (closed)");
                 }
                 else {
-                    currentTime.add(Calendar.HOUR_OF_DAY, 1);
+                    System.out.println();
                 }
-                ticks = 0;
+
             }
             else {
-                ticks++;
+                currentTime.add(Calendar.HOUR_OF_DAY, 1);
             }
 
-        }
-
-        // Introduces error into prices according to skill
-        // The higher the skill the more accurate the return value is
-        private float errorPrice(float price, int skill) {
-            Random r = new Random();
-            if (skill < r.nextInt(INVESTOR_MAX_SKILL)) {
-                // Error is x% of price with x being lower the higher the skill of the investor
-                float error = (INVESTOR_MAX_SKILL - skill - 1) * (float) r.nextGaussian() / 100f;
-                price = price+price*error;
-            }
-            return price;
-        }
-
-        public boolean done() {
-            return finished;
         }
     }
 

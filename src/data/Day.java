@@ -1,10 +1,10 @@
 package data;
 
-import utils.MarketSettings;
-import utils.Utils;
-
 import java.util.Calendar;
 import java.util.Random;
+
+import utils.DateNotFoundException;
+import static utils.Settings.*;
 
 public class Day {
     private Calendar date;
@@ -48,15 +48,15 @@ public class Day {
         return volume;
     }
 
-    public float getPrice(Calendar date) throws Exception {
+    public float getPrice(Calendar date) throws DateNotFoundException {
         Random r = new Random();
-        if (date.get(Calendar.HOUR_OF_DAY) < MarketSettings.OPEN_TIME || date.get(Calendar.HOUR_OF_DAY) > MarketSettings.CLOSE_TIME) {
-            throw new Exception("Market closed");
+        if (date.get(Calendar.HOUR_OF_DAY) < OPEN_TIME || date.get(Calendar.HOUR_OF_DAY) > CLOSE_TIME) {
+            throw new DateNotFoundException();
         }
-        float linear_price = (date.get(Calendar.HOUR_OF_DAY)-MarketSettings.OPEN_TIME)*(this.close-this.open)/(MarketSettings.CLOSE_TIME-MarketSettings.OPEN_TIME) + this.open;
+        float linear_price = (date.get(Calendar.HOUR_OF_DAY)-OPEN_TIME)*(this.close-this.open)/(CLOSE_TIME-OPEN_TIME) + this.open;
 
         float variance = (float) r.nextGaussian()/3;
-        if (date.get(Calendar.HOUR_OF_DAY) == MarketSettings.OPEN_TIME || date.get(Calendar.HOUR_OF_DAY) == MarketSettings.CLOSE_TIME) {
+        if (date.get(Calendar.HOUR_OF_DAY) == OPEN_TIME || date.get(Calendar.HOUR_OF_DAY) == CLOSE_TIME) {
             variance = 0;
         }
         else if (this.high-linear_price > linear_price-this.low) {
