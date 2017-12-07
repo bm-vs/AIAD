@@ -8,9 +8,11 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.domain.FIPAException;
 import jade.domain.FIPANames;
 import jade.lang.acl.ACLMessage;
+import jade.lang.acl.MessageTemplate;
 import model.onto.StockMarketOntology;
 import sajas.core.AID;
 import sajas.core.Agent;
+import sajas.core.behaviours.CyclicBehaviour;
 import sajas.core.behaviours.SimpleBehaviour;
 import sajas.domain.DFService;
 import utils.StockPrice;
@@ -94,6 +96,7 @@ public class InvestorAgent extends Agent implements Serializable {
         }
 
         // Behaviours
+        addBehaviour(new InvestorSubscribe(this));
         addBehaviour(new InvestorTrade(this));
     }
 
@@ -108,36 +111,50 @@ public class InvestorAgent extends Agent implements Serializable {
 
 
     // Behaviours
-    private class InvestorTrade extends SimpleBehaviour {
-        private boolean finished = false;
+    private class InvestorSubscribe extends SimpleBehaviour {
         private boolean subscribed = false;
         private InvestorAgent agent;
 
-        public InvestorTrade(InvestorAgent a) {
+        public InvestorSubscribe(InvestorAgent a) {
             super(a);
             agent = a;
         }
 
         public void action() {
             // Subscribe to informer agent to receive prices
-            if (!subscribed) {
-                try {
-                    ACLMessage subscribe = new ACLMessage(ACLMessage.SUBSCRIBE);
-                    subscribe.setContentObject(new InvestorInfo(agent.getId(), agent.getProfile(), agent.getSkill()));
-                    subscribe.addReceiver(new AID("Informer", AID.ISLOCALNAME));
-                    send(subscribe);
+            try {
+                ACLMessage subscribe = new ACLMessage(ACLMessage.SUBSCRIBE);
+                subscribe.setContentObject(new InvestorInfo(agent.getId(), agent.getSkill()));
+                subscribe.addReceiver(new AID("Informer", AID.ISLOCALNAME));
+                send(subscribe);
 
-                    ACLMessage reply = receive();
-                    if (reply != null && reply.getPerformative() == ACLMessage.AGREE) {
-                        subscribed = true;
-                        System.out.println(id + " subscribed ok");
-                    }
-                }
-                catch (Exception e) {
-                    e.printStackTrace();
+                // Only accept subscribe messages
+                MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.AGREE), MessageTemplate.MatchSender(new AID("Informer", AID.ISLOCALNAME)));
+                ACLMessage reply = receive(mt);
+                if (reply != null) {
+                    subscribed = true;
+                    System.out.println(id + " subscribed ok");
                 }
             }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
 
+        @Override
+        public boolean done() {
+            return subscribed;
+        }
+    }
+
+    private class InvestorTrade extends SimpleBehaviour {
+        private boolean finished = false;
+
+        public InvestorTrade(InvestorAgent a) {
+            super(a);
+        }
+
+        public void action() {
             // When new prices are received buy/sell/update portfolio value
             ACLMessage stockPrices = receive();
             if (stockPrices != null && stockPrices.getPerformative() == ACLMessage.INFORM) {
@@ -204,23 +221,16 @@ public class InvestorAgent extends Agent implements Serializable {
     }
 
     public class InvestorInfo implements Serializable {
-
         private String id;
-        private int profile;
         private ArrayList<Integer> skill;
 
-        public InvestorInfo(String id, int profile, ArrayList<Integer> skill) {
+        public InvestorInfo(String id, ArrayList<Integer> skill) {
             this.id = id;
             this.skill = skill;
-            this.profile = profile;
         }
 
         public String getId() {
             return id;
-        }
-
-        public int getProfile() {
-            return profile;
         }
 
         public ArrayList<Integer> getSkill() {
@@ -235,7 +245,6 @@ public class InvestorAgent extends Agent implements Serializable {
         @Override
         public String toString() {
             String s = id + " - "
-                        + profile + " - "
                         + skill.get(TELECOM) + " "
                         + skill.get(FINANCIAL) + " "
                         + skill.get(INDUSTRIAL) + " "
