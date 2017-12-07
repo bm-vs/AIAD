@@ -177,19 +177,17 @@ public class InvestorAgent extends Agent implements Serializable {
             Collections.sort(predictedGrowth, new StockPrice.StockPriceComparator());
             Collections.reverse(predictedGrowth);
 
-            // TODO Implement portfolio distribution methods
-            Random r = new Random();
-            int nStocks = 6;
+            // Buy stock
             int i = 0;
-            float amountPerStock = capital/nStocks; // invest in 6 stocks
+            float amountPerStock = capital/PORTFOLIO_SIZE;
             for (StockPrice price: predictedGrowth) {
-                // The probability to invest in a stock is higher if the investor has more knowledge of that stock's sector
-                if (skill.get(price.getSector()) > r.nextInt(INVESTOR_MAX_SKILL) && i < nStocks) {
+                // Invests an equal amount on the stocks with highest predicted growth
+                if (i < PORTFOLIO_SIZE) {
                     int quantity = (int)(amountPerStock/price.getCurrPrice());
                     if (quantity > 0) {
                         Transaction t = new Transaction(price.getSymbol(), price.getCurrPrice(), quantity);
                         active.add(t);
-                        capital -= price.getCurrPrice() * quantity;
+                        capital -= price.getCurrPrice() * quantity + TRANSACTION_TAX;
                     }
                     i++;
                 }

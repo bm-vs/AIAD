@@ -17,6 +17,9 @@ public final class MarketSettings {
     public static final int HEALTHCARE = 4;
     public static final int TECH = 5;
 
+    // Market tax
+    public static final float TRANSACTION_TAX = 0.5f;
+
     // Stock lists to be used for a market
     // Basic - top 5 market cap for each sector from S&P 500
     public static final int BASIC_SECTOR_COUNT = 6;

@@ -18,4 +18,5 @@ public class InvestorSettings {
     public static final float[][] PROFILE = {{0.8f, 0.2f, 0, 0}, {0.2f, 0.4f, 0.4f, 0.2f}, {0.0f, 0.1f, 0.2f, 0.7f}};
 
     public static final int INVESTOR_MAX_SKILL = 11;
+    public static final int PORTFOLIO_SIZE = 10;
 }

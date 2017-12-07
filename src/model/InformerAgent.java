@@ -148,18 +148,14 @@ public class InformerAgent extends Agent {
 
         // Introduces error into prices according to skill
         // The higher the skill the more accurate the return value is
-        // TODO better error generator
         private float errorPrice(float price, int skill) {
-            // Deciding if the value is over or under the real one
             Random r = new Random();
-            int sign = r.nextInt(2);
-            if (sign == 0) {
-                sign = -1;
+            if (skill < r.nextInt(INVESTOR_MAX_SKILL)) {
+                // Error is x% of price with x being lower the higher the skill of the investor
+                float error = (INVESTOR_MAX_SKILL - skill - 1) * (float) r.nextGaussian() / 100f;
+                price = price+price*error;
             }
-
-            // Error is x% of price with x being inversely proportional to skill
-            float error = (INVESTOR_MAX_SKILL - skill + 1) * sign * 2 / 100f;
-            return price+price*error;
+            return price;
         }
 
         public boolean done() {
