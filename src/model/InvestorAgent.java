@@ -147,17 +147,17 @@ public class InvestorAgent extends Agent implements Serializable {
         }
     }
 
-    private class InvestorTrade extends SimpleBehaviour {
-        private boolean finished = false;
-
+    private class InvestorTrade extends CyclicBehaviour {
         public InvestorTrade(InvestorAgent a) {
             super(a);
         }
 
         public void action() {
+            MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.INFORM), MessageTemplate.MatchSender(new AID("Informer", AID.ISLOCALNAME)));
+
             // When new prices are received buy/sell/update portfolio value
-            ACLMessage stockPrices = receive();
-            if (stockPrices != null && stockPrices.getPerformative() == ACLMessage.INFORM) {
+            ACLMessage stockPrices = receive(mt);
+            if (stockPrices != null) {
                 try {
                     HashMap<String, StockPrice> prices = (HashMap<String, StockPrice>) stockPrices.getContentObject();
                     if (prices != null) {
@@ -169,10 +169,6 @@ public class InvestorAgent extends Agent implements Serializable {
                     e.printStackTrace();
                 }
             }
-        }
-
-        public boolean done() {
-            return finished;
         }
 
         // Buys/sells stock according to current prices and predicted prices
