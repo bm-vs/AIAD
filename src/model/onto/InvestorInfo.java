@@ -1,20 +1,19 @@
 package model.onto;
 
-import jade.content.Concept;
+import jade.content.Predicate;
+
+import java.util.ArrayList;
 
 import static utils.Settings.*;
-import static utils.Settings.HEALTHCARE;
-import static utils.Settings.TECH;
 
-public class InvestorInfo implements Concept {
+public class InvestorInfo implements Predicate {
     private static final long serialVersionUID = 1L;
     private String id;
-    private int[] skill;
+    private ArrayList<Integer> skill;
 
-    public InvestorInfo() {
-    }
+    public InvestorInfo() {}
 
-    public InvestorInfo(String id, int[] skill) {
+    public InvestorInfo(String id, ArrayList<Integer> skill) {
         this.id = id;
         this.skill = skill;
     }
@@ -27,11 +26,11 @@ public class InvestorInfo implements Concept {
         this.id = id;
     }
 
-    public int[] getSkill() {
+    public ArrayList<Integer> getSkill() {
         return skill;
     }
 
-    public void setSkill(int[] skill) {
+    public void setSkill(ArrayList<Integer> skill) {
         this.skill = skill;
     }
 
@@ -43,12 +42,12 @@ public class InvestorInfo implements Concept {
     @Override
     public String toString() {
         String s = id + " - "
-                + skill[TELECOM] + " "
-                + skill[FINANCIAL] + " "
-                + skill[INDUSTRIAL] + " "
-                + skill[ENERGY] + " "
-                + skill[HEALTHCARE] + " "
-                + skill[TECH] + " ";
+                + skill.get(TELECOM) + " "
+                + skill.get(FINANCIAL) + " "
+                + skill.get(INDUSTRIAL) + " "
+                + skill.get(ENERGY) + " "
+                + skill.get(HEALTHCARE) + " "
+                + skill.get(TECH) + " ";
         return s;
     }
 }

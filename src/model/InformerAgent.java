@@ -15,13 +15,11 @@ import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import model.onto.InvestorInfo;
 import model.onto.StockMarketOntology;
-import model.onto.Subscribe;
 import sajas.core.AID;
 import sajas.core.Agent;
 import sajas.core.behaviours.CyclicBehaviour;
 import sajas.core.behaviours.TickerBehaviour;
 import sajas.domain.DFService;
-import sajas.sim.repast3.AgentAction;
 import utils.DateNotFoundException;
 import utils.StockPrice;
 
@@ -89,17 +87,14 @@ public class InformerAgent extends Agent {
 
         public void action() {
             // Only accept subscribe messages
-            MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.SUBSCRIBE);
+            MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.INFORM);
 
             // Handle subscription of investors
             ACLMessage subscriptions = receive(mt);
             if (subscriptions != null) {
                 try {
                     // Save info about every investor
-                    ContentElement content = getContentManager().extractContent(subscriptions);
-                    Subscribe action = (Subscribe) ((Action) content).getAction();
-
-                    InvestorInfo investor = action.getInvestor();
+                    InvestorInfo investor = (InvestorInfo) getContentManager().extractContent(subscriptions);
                     if (!investors.contains(investor)) {
                         investors.add(investor);
                         System.out.println(investor + " subscribed");
@@ -130,7 +125,7 @@ public class InformerAgent extends Agent {
                     // Create different predictions to every investor according to their skill level in that sector
                     HashMap<String, StockPrice> investorPrices = new HashMap<>();
                     for (StockPrice price: prices) {
-                        int skill = investor.getSkill()[price.getSector()];
+                        int skill = investor.getSkill().get(price.getSector());
                         StockPrice investorPrice = new StockPrice(price.getSymbol(), price.getSector(), price.getCurrPrice(), price.getHourPrice());
                         investorPrice.addError(skill);
                         investorPrices.put(price.getSymbol(), investorPrice);
