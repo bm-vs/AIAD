@@ -1,8 +1,6 @@
 package model.onto;
 
-import data.Market;
 import jade.content.onto.*;
-import jade.content.schema.ObjectSchema;
 
 public class StockMarketOntology extends BeanOntology {
 	private static final long serialVersionUID = 1L;
@@ -18,12 +16,9 @@ public class StockMarketOntology extends BeanOntology {
 	
 	// Private constructor
 	private StockMarketOntology() {
-		super(ONTOLOGY_NAME, new Ontology[]{BasicOntology.getInstance(), SerializableOntology.getInstance()});
+		super(ONTOLOGY_NAME);
 
 		try {
-            ObjectSchema serializableSchema = getSchema(SerializableOntology.SERIALIZABLE);
-            SerializableOntology.getInstance().add(serializableSchema, java.util.HashMap.class);
-
 			// add all Concept, Predicate and AgentAction
 			add(InvestorInfo.class);
 			add(StockPrice.class);

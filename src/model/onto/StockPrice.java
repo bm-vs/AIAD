@@ -1,5 +1,6 @@
 package model.onto;
 
+import jade.content.Concept;
 import jade.content.Predicate;
 
 import java.io.Serializable;
@@ -9,12 +10,14 @@ import java.util.Random;
 import static utils.Settings.INVESTOR_MAX_SKILL;
 
 // Class used to pass stock price info from informer to investor
-public class StockPrice implements Predicate {
+public class StockPrice implements Concept {
     private String symbol;
     private int sector;
     private float currPrice;  // price at the current time
     private float hourPrice;  // price next hour
     private float estimatedPrice; // price prediction to be used by investorAgents
+
+    public StockPrice() {}
 
     public StockPrice(String symbol, int sector, float currPrice, float hourPrice) {
         this.symbol = symbol;

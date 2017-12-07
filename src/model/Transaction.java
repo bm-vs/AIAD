@@ -33,7 +33,7 @@ public class Transaction implements Serializable {
         return stockSymbol;
     }
 
-    public double getBuyPrice() {
+    public float getBuyPrice() {
         return buyPrice;
     }
 
@@ -41,7 +41,7 @@ public class Transaction implements Serializable {
         return quantity;
     }
 
-    public double getSellPrice() {
+    public float getSellPrice() {
         return sellPrice;
     }
 

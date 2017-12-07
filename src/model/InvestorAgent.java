@@ -68,10 +68,15 @@ public class InvestorAgent extends Agent implements Serializable {
     }
 
     // Updates the sum of values of every stock
-    private void updatePortfolioValue(HashMap<String, StockPrice> prices) {
+    private void updatePortfolioValue(ArrayList<StockPrice> prices) {
         portfolioValue = 0;
         for (Transaction t: active) {
-            portfolioValue += prices.get(t.getStock()).getCurrPrice()*t.getQuantity();
+            for (StockPrice stock: prices) {
+                if (stock.getSymbol().equals(t.getStock())) {
+                    portfolioValue += stock.getCurrPrice()*t.getQuantity();
+                    break;
+                }
+            }
         }
     }
 
@@ -164,7 +169,7 @@ public class InvestorAgent extends Agent implements Serializable {
             if (stockPrices != null) {
                 try {
                     MarketPrices marketInfo = (MarketPrices) getContentManager().extractContent(stockPrices);
-                    HashMap<String, StockPrice> prices = marketInfo.getPrices();
+                    ArrayList<StockPrice> prices = marketInfo.getPrices();
                     if (prices != null) {
                         moveStock(prices);
                         updatePortfolioValue(prices);
@@ -177,12 +182,12 @@ public class InvestorAgent extends Agent implements Serializable {
         }
 
         // Buys/sells stock according to current prices and predicted prices
-        private void moveStock(HashMap<String, StockPrice> prices) {
+        private void moveStock(ArrayList<StockPrice> prices) {
             sellAll(prices);
 
             // Get top growth stock
             ArrayList<StockPrice> predictedGrowth = new ArrayList<>();
-            for (StockPrice price: prices.values()) {
+            for (StockPrice price: prices) {
                 float estimated = price.getHourPrice();
                 price.setEstimatedPrice(estimated);
                 predictedGrowth.add(price);
@@ -208,10 +213,16 @@ public class InvestorAgent extends Agent implements Serializable {
         }
 
         // Liquidates all open positions
-        private void sellAll(HashMap<String, StockPrice> prices) {
+        private void sellAll(ArrayList<StockPrice> prices) {
             for (Iterator<Transaction> it = active.iterator(); it.hasNext(); ) {
                 Transaction t = it.next();
-                float currentPrice = prices.get(t.getStock()).getCurrPrice();
+                float currentPrice = t.getBuyPrice();
+                for (StockPrice stock: prices) {
+                    if (stock.getSymbol().equals(t.getStock())) {
+                        currentPrice = stock.getCurrPrice();
+                        break;
+                    }
+                }
                 t.setSellPrice(currentPrice);
                 t.closeTransaction();
                 closed.add(t);

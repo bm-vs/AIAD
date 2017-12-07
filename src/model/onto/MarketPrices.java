@@ -1,21 +1,22 @@
 package model.onto;
 
 import jade.content.Predicate;
-
-import java.util.HashMap;
+import java.util.ArrayList;
 
 public class MarketPrices implements Predicate {
-    private HashMap<String, StockPrice> prices;
+    private ArrayList<StockPrice> prices;
 
-    public MarketPrices(HashMap<String, StockPrice> prices) {
+    public MarketPrices() {}
+
+    public MarketPrices(ArrayList<StockPrice> prices) {
         this.prices = prices;
     }
 
-    public HashMap<String, StockPrice> getPrices() {
+    public ArrayList<StockPrice> getPrices() {
         return prices;
     }
 
-    public void setPrices(HashMap<String, StockPrice> prices) {
+    public void setPrices(ArrayList<StockPrice> prices) {
         this.prices = prices;
     }
 }

@@ -124,12 +124,12 @@ public class InformerAgent extends Agent {
 
                 for (InvestorInfo investor : investors) {
                     // Create different predictions to every investor according to their skill level in that sector
-                    HashMap<String, StockPrice> investorPrices = new HashMap<>();
+                    ArrayList<StockPrice> investorPrices = new ArrayList<>();
                     for (StockPrice price: prices) {
                         int skill = investor.getSkill().get(price.getSector());
                         StockPrice investorPrice = new StockPrice(price.getSymbol(), price.getSector(), price.getCurrPrice(), price.getHourPrice());
                         investorPrice.addError(skill);
-                        investorPrices.put(price.getSymbol(), investorPrice);
+                        investorPrices.add(investorPrice);
                     }
 
                     // Send prices
