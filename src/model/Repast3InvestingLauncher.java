@@ -109,9 +109,9 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 				Random r = new Random();
 				for (int i = 0; i < nInvestors; i++) {
 					String id = "Investor" + i;
-					ArrayList<Integer> skill = new ArrayList<>();
-					for (int j = 0; j < nSectors; j++) {
-						skill.add(r.nextInt(INVESTOR_MAX_SKILL));
+					int[] skill = new int[nSectors];
+					for (int j = 0; j < skill.length; j++) {
+						skill[j] = r.nextInt(INVESTOR_MAX_SKILL);
 					}
 
 					InvestorAgent agent = new InvestorAgent(id, initialCapital, skill);
@@ -182,10 +182,12 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
                 String id = info[0];
                 float capital = Float.parseFloat(info[1]);
                 String[] skillString = info[2].split(";");
-                ArrayList<Integer> skill = new ArrayList<>();
-                for (String s: skillString) {
-                    skill.add(Integer.parseInt(s));
-                }
+
+				int nSectors = market.getNSectors();
+                int[] skill = new int[nSectors];
+                for (int i = 0; i < skill.length; i++) {
+                	skill[i] = Integer.parseInt(skillString[i]);
+				}
 
                 custom.add(new InvestorAgent(id, capital, skill));
             }

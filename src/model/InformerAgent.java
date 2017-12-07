@@ -1,21 +1,27 @@
 package model;
 
 import data.Market;
+import jade.content.Concept;
+import jade.content.ContentElement;
 import jade.content.lang.Codec;
 import jade.content.lang.sl.SLCodec;
 import jade.content.onto.Ontology;
+import jade.content.onto.basic.Action;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.domain.FIPAException;
 import jade.domain.FIPANames;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
+import model.onto.InvestorInfo;
 import model.onto.StockMarketOntology;
+import model.onto.Subscribe;
 import sajas.core.AID;
 import sajas.core.Agent;
 import sajas.core.behaviours.CyclicBehaviour;
 import sajas.core.behaviours.TickerBehaviour;
 import sajas.domain.DFService;
+import sajas.sim.repast3.AgentAction;
 import utils.DateNotFoundException;
 import utils.StockPrice;
 
@@ -31,7 +37,7 @@ public class InformerAgent extends Agent {
     private Ontology stockMarketOntology;
     private Market market;
     private Calendar currentTime;
-    private ArrayList<InvestorAgent.InvestorInfo> investors;
+    private ArrayList<InvestorInfo> investors;
 
     public InformerAgent(Market market) {
         this.market = market;
@@ -90,7 +96,10 @@ public class InformerAgent extends Agent {
             if (subscriptions != null) {
                 try {
                     // Save info about every investor
-                    InvestorAgent.InvestorInfo investor = (InvestorAgent.InvestorInfo) subscriptions.getContentObject();
+                    ContentElement content = getContentManager().extractContent(subscriptions);
+                    Subscribe action = (Subscribe) ((Action) content).getAction();
+
+                    InvestorInfo investor = action.getInvestor();
                     if (!investors.contains(investor)) {
                         investors.add(investor);
                         System.out.println(investor + " subscribed");
@@ -117,11 +126,11 @@ public class InformerAgent extends Agent {
             try {
                 ArrayList<StockPrice> prices = market.getPrices(currentTime);
 
-                for (InvestorAgent.InvestorInfo investor : investors) {
+                for (InvestorInfo investor : investors) {
                     // Create different predictions to every investor according to their skill level in that sector
                     HashMap<String, StockPrice> investorPrices = new HashMap<>();
                     for (StockPrice price: prices) {
-                        int skill = investor.getSkill().get(price.getSector());
+                        int skill = investor.getSkill()[price.getSector()];
                         StockPrice investorPrice = new StockPrice(price.getSymbol(), price.getSector(), price.getCurrPrice(), price.getHourPrice());
                         investorPrice.addError(skill);
                         investorPrices.put(price.getSymbol(), investorPrice);

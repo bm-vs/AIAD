@@ -1,7 +1,6 @@
 package model.onto;
 
 import jade.content.Concept;
-import java.util.ArrayList;
 
 import static utils.Settings.*;
 import static utils.Settings.HEALTHCARE;
@@ -10,12 +9,12 @@ import static utils.Settings.TECH;
 public class InvestorInfo implements Concept {
     private static final long serialVersionUID = 1L;
     private String id;
-    private ArrayList<Integer> skill;
+    private int[] skill;
 
     public InvestorInfo() {
     }
 
-    public InvestorInfo(String id, ArrayList<Integer> skill) {
+    public InvestorInfo(String id, int[] skill) {
         this.id = id;
         this.skill = skill;
     }
@@ -28,11 +27,11 @@ public class InvestorInfo implements Concept {
         this.id = id;
     }
 
-    public ArrayList<Integer> getSkill() {
+    public int[] getSkill() {
         return skill;
     }
 
-    public void setSkill(ArrayList<Integer> skill) {
+    public void setSkill(int[] skill) {
         this.skill = skill;
     }
 
@@ -44,12 +43,12 @@ public class InvestorInfo implements Concept {
     @Override
     public String toString() {
         String s = id + " - "
-                + skill.get(TELECOM) + " "
-                + skill.get(FINANCIAL) + " "
-                + skill.get(INDUSTRIAL) + " "
-                + skill.get(ENERGY) + " "
-                + skill.get(HEALTHCARE) + " "
-                + skill.get(TECH) + " ";
+                + skill[TELECOM] + " "
+                + skill[FINANCIAL] + " "
+                + skill[INDUSTRIAL] + " "
+                + skill[ENERGY] + " "
+                + skill[HEALTHCARE] + " "
+                + skill[TECH] + " ";
         return s;
     }
 }

@@ -9,7 +9,9 @@ import jade.domain.FIPAException;
 import jade.domain.FIPANames;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
+import model.onto.InvestorInfo;
 import model.onto.StockMarketOntology;
+import model.onto.Subscribe;
 import sajas.core.AID;
 import sajas.core.Agent;
 import sajas.core.behaviours.CyclicBehaviour;
@@ -29,10 +31,10 @@ public class InvestorAgent extends Agent implements Serializable {
     private String id;
     private float capital;
     private float portfolioValue;
-    private ArrayList<Integer> skill; // represents the knowledge (0-10) of each sector (0-5)
+    private int[] skill; // represents the knowledge (0-10) of each sector (0-5)
     private int profile;
 
-    public InvestorAgent(String id, float initialCapital, ArrayList<Integer> skill) {
+    public InvestorAgent(String id, float initialCapital, int[] skill) {
         this.id = id;
         this.capital = initialCapital;
         this.skill = skill;
@@ -57,7 +59,7 @@ public class InvestorAgent extends Agent implements Serializable {
         return capital + portfolioValue;
     }
 
-    public ArrayList<Integer> getSkill() {
+    public int[] getSkill() {
         return skill;
     }
 
@@ -123,7 +125,9 @@ public class InvestorAgent extends Agent implements Serializable {
             // Subscribe to informer agent to receive prices
             try {
                 ACLMessage subscribe = new ACLMessage(ACLMessage.SUBSCRIBE);
-                subscribe.setContentObject(new InvestorInfo(agent.getId(), agent.getSkill()));
+                subscribe.setLanguage(codec.getName());
+                subscribe.setOntology(stockMarketOntology.getName());
+                getContentManager().fillContent(subscribe, new Subscribe(new InvestorInfo(agent.getId(), agent.getSkill())));
                 subscribe.addReceiver(new AID("Informer", AID.ISLOCALNAME));
                 send(subscribe);
 

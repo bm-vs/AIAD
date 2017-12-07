@@ -2,14 +2,14 @@ package model.onto;
 
 import jade.content.AgentAction;
 
-public class InvestorSubscribe implements AgentAction {
+public class Subscribe implements AgentAction {
     private static final long serialVersionUID = 1L;
     private InvestorInfo investor;
 
-    public InvestorSubscribe() {
+    public Subscribe() {
     }
 
-    public InvestorSubscribe(InvestorInfo investor) {
+    public Subscribe(InvestorInfo investor) {
         this.investor = investor;
     }
 
