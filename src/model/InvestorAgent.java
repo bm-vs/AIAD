@@ -109,7 +109,6 @@ public class InvestorAgent extends Agent implements Serializable {
         }
     }
 
-
     // Behaviours
     private class InvestorSubscribe extends SimpleBehaviour {
         private boolean subscribed = false;
@@ -213,41 +212,6 @@ public class InvestorAgent extends Agent implements Serializable {
                 it.remove();
                 capital += t.getQuantity()*currentPrice;
             }
-        }
-    }
-
-    public class InvestorInfo implements Serializable {
-        private String id;
-        private ArrayList<Integer> skill;
-
-        public InvestorInfo(String id, ArrayList<Integer> skill) {
-            this.id = id;
-            this.skill = skill;
-        }
-
-        public String getId() {
-            return id;
-        }
-
-        public ArrayList<Integer> getSkill() {
-            return skill;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            return ((InvestorInfo) obj).getId().equals(this.id);
-        }
-
-        @Override
-        public String toString() {
-            String s = id + " - "
-                        + skill.get(TELECOM) + " "
-                        + skill.get(FINANCIAL) + " "
-                        + skill.get(INDUSTRIAL) + " "
-                        + skill.get(ENERGY) + " "
-                        + skill.get(HEALTHCARE) + " "
-                        + skill.get(TECH) + " ";
-            return s;
         }
     }
 }

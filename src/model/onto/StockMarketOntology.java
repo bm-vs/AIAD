@@ -22,13 +22,10 @@ public class StockMarketOntology extends BeanOntology {
 		
 		try {
 			// add all Concept, Predicate and AgentAction
-			add(ServiceProposal.class);
-			add(ServiceProposalRequest.class);
-			add(ServiceExecutionRequest.class);
-			add(ContractOutcome.class);
-			add(Results.class);
-			
-		} catch(BeanOntologyException boe) {
+			add(InvestorInfo.class);
+			add(InvestorSubscribe.class);
+		}
+		catch(BeanOntologyException boe) {
 			boe.printStackTrace();
 		}
 	}
