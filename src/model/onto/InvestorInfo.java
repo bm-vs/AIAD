@@ -1,9 +1,7 @@
 package model.onto;
 
 import jade.content.Predicate;
-
 import java.util.ArrayList;
-
 import static utils.Settings.*;
 
 public class InvestorInfo implements Predicate {

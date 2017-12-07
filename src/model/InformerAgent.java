@@ -14,6 +14,7 @@ import jade.domain.FIPANames;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import model.onto.InvestorInfo;
+import model.onto.MarketPrices;
 import model.onto.StockMarketOntology;
 import sajas.core.AID;
 import sajas.core.Agent;
@@ -21,7 +22,7 @@ import sajas.core.behaviours.CyclicBehaviour;
 import sajas.core.behaviours.TickerBehaviour;
 import sajas.domain.DFService;
 import utils.DateNotFoundException;
-import utils.StockPrice;
+import model.onto.StockPrice;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -46,7 +47,7 @@ public class InformerAgent extends Agent {
     @Override
     public void setup() {
         // register language and ontology
-        codec = new SLCodec();
+        codec = new SLCodec(true);
         stockMarketOntology = StockMarketOntology.getInstance();
         getContentManager().registerLanguage(codec);
         getContentManager().registerOntology(stockMarketOntology);
@@ -87,7 +88,7 @@ public class InformerAgent extends Agent {
 
         public void action() {
             // Only accept subscribe messages
-            MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.INFORM);
+            MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.SUBSCRIBE);
 
             // Handle subscription of investors
             ACLMessage subscriptions = receive(mt);
@@ -133,14 +134,20 @@ public class InformerAgent extends Agent {
 
                     // Send prices
                     ACLMessage stockPrices = new ACLMessage(ACLMessage.INFORM);
-                    stockPrices.setContentObject(investorPrices);
                     stockPrices.addReceiver(new AID(investor.getId(), AID.ISLOCALNAME));
+                    stockPrices.setLanguage(codec.getName());
+                    stockPrices.setOntology(stockMarketOntology.getName());
+                    getContentManager().fillContent(stockPrices, new MarketPrices(investorPrices));
+
                     send(stockPrices);
                 }
             }
             catch (Exception e) {
                 if (e instanceof DateNotFoundException) {
                     dayNotFound = true;
+                }
+                else {
+                    e.printStackTrace();
                 }
             }
 

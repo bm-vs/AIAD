@@ -10,13 +10,14 @@ import jade.domain.FIPANames;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import model.onto.InvestorInfo;
+import model.onto.MarketPrices;
 import model.onto.StockMarketOntology;
 import sajas.core.AID;
 import sajas.core.Agent;
 import sajas.core.behaviours.CyclicBehaviour;
 import sajas.core.behaviours.SimpleBehaviour;
 import sajas.domain.DFService;
-import utils.StockPrice;
+import model.onto.StockPrice;
 import static utils.Settings.*;
 
 import java.io.Serializable;
@@ -77,7 +78,7 @@ public class InvestorAgent extends Agent implements Serializable {
     @Override
     public void setup() {
         // register language and ontology
-        codec = new SLCodec();
+        codec = new SLCodec(true);
         stockMarketOntology = StockMarketOntology.getInstance();
         getContentManager().registerLanguage(codec);
         getContentManager().registerOntology(stockMarketOntology);
@@ -123,7 +124,7 @@ public class InvestorAgent extends Agent implements Serializable {
         public void action() {
             // Subscribe to informer agent to receive prices
             try {
-                ACLMessage subscribe = new ACLMessage(ACLMessage.INFORM);
+                ACLMessage subscribe = new ACLMessage(ACLMessage.SUBSCRIBE);
                 subscribe.addReceiver(new AID("Informer", AID.ISLOCALNAME));
                 subscribe.setLanguage(codec.getName());
                 subscribe.setOntology(stockMarketOntology.getName());
@@ -162,7 +163,8 @@ public class InvestorAgent extends Agent implements Serializable {
             ACLMessage stockPrices = receive(mt);
             if (stockPrices != null) {
                 try {
-                    HashMap<String, StockPrice> prices = (HashMap<String, StockPrice>) stockPrices.getContentObject();
+                    MarketPrices marketInfo = (MarketPrices) getContentManager().extractContent(stockPrices);
+                    HashMap<String, StockPrice> prices = marketInfo.getPrices();
                     if (prices != null) {
                         moveStock(prices);
                         updatePortfolioValue(prices);

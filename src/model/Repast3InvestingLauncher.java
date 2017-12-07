@@ -36,7 +36,7 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 	private int nInvestors = 1;
 	private float initialCapital = 10000;
 	private boolean detailedInfo = false;
-	private String customInvestors = "";
+	private String customInvestors = "test1";
 
 	public Repast3InvestingLauncher() {
 		super();

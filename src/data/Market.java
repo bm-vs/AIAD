@@ -1,6 +1,6 @@
 package data;
 
-import utils.StockPrice;
+import model.onto.StockPrice;
 
 import java.util.ArrayList;
 import java.util.Calendar;
