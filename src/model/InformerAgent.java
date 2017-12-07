@@ -54,7 +54,7 @@ public class InformerAgent extends Agent {
         dfd.addProtocols(FIPANames.InteractionProtocol.FIPA_CONTRACT_NET);
         ServiceDescription sd = new ServiceDescription();
         sd.setName(getLocalName() + "-service-provider");
-        sd.setType("service-provider");
+        sd.setType("informer");
         dfd.addServices(sd);
         try {
             DFService.register(this, dfd);

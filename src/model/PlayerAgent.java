@@ -19,10 +19,12 @@ import java.io.Serializable;
 import java.util.*;
 
 public class PlayerAgent extends Agent implements  Serializable{
-
     private Codec codec;
     private Ontology serviceOntology;
     private String id;
+    private HashMap<String, InvestorTrust> investorTrust; // save trust associated with every investor id
+    private float investedAmount; // amount sent to investor
+    private InvestorAgent investor; // investor the player agent has its money on
     private float capital;
     private float portfolioValue;
 
@@ -47,6 +49,14 @@ public class PlayerAgent extends Agent implements  Serializable{
         return capital + portfolioValue;
     }
 
+    public void setInvestorAgent(InvestorAgent investor){
+        this.investor = investor;
+    }
+
+    public InvestorAgent getInvestorAgent(){
+        return  investor;
+    }
+
     @Override
     public void setup(){
         // register language and ontology
@@ -61,7 +71,7 @@ public class PlayerAgent extends Agent implements  Serializable{
         dfd.addProtocols(FIPANames.InteractionProtocol.FIPA_CONTRACT_NET);
         ServiceDescription sd = new ServiceDescription();
         sd.setName(getLocalName() + "-service-provider");
-        sd.setType("service-provider");
+        sd.setType("player");
         dfd.addServices(sd);
         try {
             DFService.register(this, dfd);
@@ -84,6 +94,14 @@ public class PlayerAgent extends Agent implements  Serializable{
         private boolean finished = false;
 
         public void action(){
+            // TODO
+            // Receive reports
+            // For every report received update trust in each investor
+
+            // Withdraw - send playerId (+capital) (-investedAmount)
+            // Invest - send playerId and amount (-capital) (+investedAmount)
+
+
 
         }
 
