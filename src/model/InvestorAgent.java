@@ -36,6 +36,7 @@ public class InvestorAgent extends Agent implements Serializable {
     private int skillChangePeriod;
     private ArrayList<ArrayList<Integer>> nextSkills;
     private boolean repeat;
+    private ArrayList<AID> followers;
 
     public InvestorAgent(String id, float initialCapital, ArrayList<Integer> skill, int skillChangePeriod) {
         this.id = id;
@@ -44,6 +45,7 @@ public class InvestorAgent extends Agent implements Serializable {
         this.skillChangePeriod = skillChangePeriod;
         this.active = new ArrayList<>();
         this.closed = new ArrayList<>();
+        this.followers = new ArrayList<>();
     }
 
     public InvestorAgent(String id, float initialCapital, ArrayList<Integer> skill, int skillChangePeriod, ArrayList<ArrayList<Integer>> nextSkills, boolean repeat) {
@@ -128,6 +130,7 @@ public class InvestorAgent extends Agent implements Serializable {
         sd.setName(getLocalName() + "-investor");
         sd.setType("investor");
         dfd.addServices(sd);
+
         try {
             DFService.register(this, dfd);
         } catch (FIPAException e) {
@@ -136,6 +139,8 @@ public class InvestorAgent extends Agent implements Serializable {
 
         // Behaviours
         addBehaviour(new InvestorSubscribe(this));
+        //addBehaviour(new ManageFollowers());
+        //addBehaviour(new SendInfoFollowers());
         addBehaviour(new InvestorTrade(this));
         if (skillChangePeriod != STATIC_AGENT) {
             addBehaviour(new InvestorChangeSkill(this));
@@ -306,6 +311,53 @@ public class InvestorAgent extends Agent implements Serializable {
                     break;
                 }
             }
+        }
+    }
+
+    // TODO - IMPLEMENTAR  - faz gestão de follow e unfollow de seguidores
+    private class ManageFollowers extends CyclicBehaviour {
+        public void action() {
+            /*MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);
+            ACLMessage msg = myAgent.receive(mt);
+
+            // Player agent asks info about the investor agent
+            if (msg != null && msg.getConversationId().equals("rate-req")) {
+                ACLMessage reply = msg.createReply();
+                reply.setPerformative(ACLMessage.INFORM);
+
+                // TODO - CORRIGIR - colocar aqui a infrmação que o investor deve enviar o player para ser avaliado
+                reply.setContent("colocar aqui informação relevante do investor");
+                myAgent.send(reply);
+            }
+
+            // Player agent asks to be added to followers
+            else if (msg != null && msg.getConversationId().equals("follow")) {
+                addFollower(msg.getSender());
+            }
+
+            // Player agent asks to be removed from followers
+            else if (msg != null && msg.getConversationId().equals("unfollow")) {
+                removeFollower(msg.getSender());
+            }*/
+        }
+
+        private void addFollower(AID follower){
+            if(!followers.contains(follower))
+                followers.add(follower);
+        }
+
+        private void removeFollower(AID follower){
+            if(followers.contains(follower))
+                followers.remove(follower);
+        }
+
+    }
+
+    // TODO - IMPLEMENTAR - Behaviour para periodicment eenviar informação para os followers deste investor
+    private class SendInfoFollowers extends CyclicBehaviour {
+
+        public void action(){
+
         }
     }
 

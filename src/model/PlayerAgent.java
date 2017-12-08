@@ -26,15 +26,14 @@ public class PlayerAgent extends Agent implements  Serializable{
     private String id;
     private float capital;
     private float portfolioValue;
-    private ArrayList<AID> investorAgents;
-    private HashMap<String, InvestorTrust> investorTrust; // save trust associated with every investor id
+    private HashMap<AID, InvestorTrust> investorTrust; // save trust associated with every investor id
     private InvestorAgent investor; // investor the player agent has its money on
 
 
     public PlayerAgent(String id, float initialCapital) {
       this.id = id;
       this.capital = initialCapital;
-      this.investorAgents = new ArrayList<>();
+      this.investorTrust = new HashMap<>();
     }
 
     public String getId() {
@@ -117,7 +116,7 @@ public class PlayerAgent extends Agent implements  Serializable{
                 DFAgentDescription[] result = DFService.search(this.agent, template);
 
                 for (int i = 0; i < result.length; i++) {
-                    this.agent.investorAgents.add(result[i].getName());
+                    this.agent.investorTrust.put(result[i].getName(), new InvestorTrust());
 
                     // TODO - IMPLEMENTAR
                     //investorAgents[i] = result[i].getName();
@@ -127,7 +126,7 @@ public class PlayerAgent extends Agent implements  Serializable{
 
                 foundInvestors = true;
 
-                System.out.println("Found "+this.agent.investorAgents.size()+"investor agents.");
+                System.out.println("Found "+this.agent.investorTrust.size()+"investor agents.");
             } catch (FIPAException fe) {
                 fe.printStackTrace();
             }
@@ -140,13 +139,13 @@ public class PlayerAgent extends Agent implements  Serializable{
     }
 
     //Behaviours
-    private class ReceiveReports extends CyclicBehaviour {
+    private class ReportsReveiver extends CyclicBehaviour {
 
         public void action(){
             MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.INFORM),
                     MessageTemplate.MatchSender(new AID("Informer", AID.ISLOCALNAME)));
 
-            ACLMessage reports = receive(mt);
+            ACLMessage reports = myAgent.receive(mt);
 
             if(reports != null){
                 updateTrust(reports);
