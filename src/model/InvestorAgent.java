@@ -1,5 +1,6 @@
 package model;
 
+import jade.core.AID;
 import jade.content.lang.Codec;
 import jade.content.lang.sl.SLCodec;
 import jade.content.onto.Ontology;
@@ -12,7 +13,6 @@ import jade.lang.acl.MessageTemplate;
 import model.onto.InvestorInfo;
 import model.onto.MarketPrices;
 import model.onto.StockMarketOntology;
-import sajas.core.AID;
 import sajas.core.Agent;
 import sajas.core.behaviours.CyclicBehaviour;
 import sajas.core.behaviours.SimpleBehaviour;
@@ -36,6 +36,7 @@ public class InvestorAgent extends Agent implements Serializable {
     private int skillChangePeriod;
     private ArrayList<ArrayList<Integer>> nextSkills;
     private boolean repeat;
+    private AID informer;
     private ArrayList<AID> followers;
 
     public InvestorAgent(String id, float initialCapital, ArrayList<Integer> skill, int skillChangePeriod) {
@@ -45,6 +46,7 @@ public class InvestorAgent extends Agent implements Serializable {
         this.skillChangePeriod = skillChangePeriod;
         this.active = new ArrayList<>();
         this.closed = new ArrayList<>();
+        this.informer = new AID();
         this.followers = new ArrayList<>();
     }
 
@@ -139,9 +141,12 @@ public class InvestorAgent extends Agent implements Serializable {
 
         // Behaviours
         addBehaviour(new InvestorSubscribe(this));
-        //addBehaviour(new ManageFollowers());
+        addBehaviour(new ManageFollowers());
+
+        // TODO - TIRAR COMENTÁRIO ASSIM QUE ESTEJA IMPLEMENTADO
         //addBehaviour(new SendInfoFollowers());
         addBehaviour(new InvestorTrade(this));
+
         if (skillChangePeriod != STATIC_AGENT) {
             addBehaviour(new InvestorChangeSkill(this));
         }
@@ -167,10 +172,22 @@ public class InvestorAgent extends Agent implements Serializable {
         }
 
         public void action() {
+            DFAgentDescription template = new DFAgentDescription();
+            ServiceDescription sd2 = new ServiceDescription();
+            sd2.setType("informer");
+            template.addServices(sd2);
+
+            try {
+                DFAgentDescription[] result = DFService.search(this.agent, template);
+                this.agent.informer = result[0].getName();
+            } catch (FIPAException fe) {
+                fe.printStackTrace();
+            }
+
             // Subscribe to informer agent to receive prices
             try {
                 ACLMessage subscribe = new ACLMessage(ACLMessage.SUBSCRIBE);
-                subscribe.addReceiver(new AID("Informer", AID.ISLOCALNAME));
+                subscribe.addReceiver(this.agent.informer);
                 subscribe.setLanguage(codec.getName());
                 subscribe.setOntology(stockMarketOntology.getName());
 
@@ -178,7 +195,8 @@ public class InvestorAgent extends Agent implements Serializable {
                 agent.send(subscribe);
 
                 // Only accept subscribe messages
-                MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.AGREE), MessageTemplate.MatchSender(new AID("Informer", AID.ISLOCALNAME)));
+                MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.AGREE),
+                        MessageTemplate.MatchSender(this.agent.informer));
                 ACLMessage reply = receive(mt);
                 if (reply != null) {
                     subscribed = true;
@@ -197,12 +215,15 @@ public class InvestorAgent extends Agent implements Serializable {
     }
 
     private class InvestorTrade extends CyclicBehaviour {
-        public InvestorTrade(InvestorAgent a) {
-            super(a);
+        InvestorAgent agent;
+
+        public InvestorTrade(InvestorAgent agent) {
+            super(agent);
+            this.agent = agent;
         }
 
         public void action() {
-            MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.INFORM), MessageTemplate.MatchSender(new AID("Informer", AID.ISLOCALNAME)));
+            MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.INFORM), MessageTemplate.MatchSender(this.agent.informer));
 
             // When new prices are received buy/sell/update portfolio value
             ACLMessage stockPrices = receive(mt);
@@ -317,11 +338,11 @@ public class InvestorAgent extends Agent implements Serializable {
     // TODO - IMPLEMENTAR  - faz gestão de follow e unfollow de seguidores
     private class ManageFollowers extends CyclicBehaviour {
         public void action() {
-            /*MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);
+            MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);
             ACLMessage msg = myAgent.receive(mt);
 
             // Player agent asks info about the investor agent
-            if (msg != null && msg.getConversationId().equals("rate-req")) {
+            if (msg != null && msg.getConversationId().equals("rate")) {
                 ACLMessage reply = msg.createReply();
                 reply.setPerformative(ACLMessage.INFORM);
 
@@ -338,7 +359,7 @@ public class InvestorAgent extends Agent implements Serializable {
             // Player agent asks to be removed from followers
             else if (msg != null && msg.getConversationId().equals("unfollow")) {
                 removeFollower(msg.getSender());
-            }*/
+            }
         }
 
         private void addFollower(AID follower){

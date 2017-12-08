@@ -15,10 +15,13 @@ import model.onto.StockMarketOntology;
 import sajas.core.Agent;
 import sajas.core.behaviours.CyclicBehaviour;
 import sajas.core.behaviours.SimpleBehaviour;
+import sajas.core.behaviours.TickerBehaviour;
 import sajas.domain.DFService;
 
 import java.io.Serializable;
 import java.util.*;
+
+import static utils.Settings.BROADCAST_PERIOD;
 
 public class PlayerAgent extends Agent implements  Serializable{
     private Codec codec;
@@ -86,6 +89,7 @@ public class PlayerAgent extends Agent implements  Serializable{
         }
 
         addBehaviour(new SearchInvestorAgents(this));
+        addBehaviour(new ManageFollowing(this));
     }
 
     @Override
@@ -97,6 +101,8 @@ public class PlayerAgent extends Agent implements  Serializable{
         }
     }
 
+
+    // Behaviours
     private class SearchInvestorAgents extends SimpleBehaviour {
         private boolean foundInvestors = false;
         private PlayerAgent agent;
@@ -118,7 +124,7 @@ public class PlayerAgent extends Agent implements  Serializable{
                 for (int i = 0; i < result.length; i++) {
                     this.agent.investorTrust.put(result[i].getName(), new InvestorTrust());
 
-                    // TODO - IMPLEMENTAR
+                    // TODO - IMPLEMENTAR - COLOCAR LOGO AQUI VALORRES INICIAIS DE RATE/CONFIANÇA?
                     //investorAgents[i] = result[i].getName();
                     //investorAgentsRatio[i] = 0;
                     //System.out.println(investorAgents[i].getName() + "  -  " + result.length);
@@ -138,46 +144,129 @@ public class PlayerAgent extends Agent implements  Serializable{
         }
     }
 
-    //Behaviours
-    private class ReportsReveiver extends CyclicBehaviour {
+    // TODO - FALTA IMPLEMENTAR - FAZ A GESTÃO DE QUEM ESTÁ A SEGUIR, FAZNEDO PEDIDOS DE NOVAS INFORMAÇÕES DE RATE, OUD E FOLLOW/UNFOLLOW
+    // TODO - VERIFICAR EM CADA STEP O QUE PODE EVENTUALMENTE FALTAR
+    private  class ManageFollowing extends TickerBehaviour {
+        private PlayerAgent agent;
+        private int step = 0;
+        private int replies = 0;
 
-        public void action(){
-            MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.INFORM),
-                    MessageTemplate.MatchSender(new AID("Informer", AID.ISLOCALNAME)));
-
-            ACLMessage reports = myAgent.receive(mt);
-
-            if(reports != null){
-                updateTrust(reports);
-
-            }
+        public ManageFollowing(PlayerAgent agent){
+            super(agent, BROADCAST_PERIOD);
+            this.agent = agent;
         }
 
-        // TODO - falta implementar
-        public void updateTrust(ACLMessage reports){
+        public void onTick(){
+            switch (step) {
+                // Request success rate to all investors
+                case 0:
+                    ACLMessage cfp = new ACLMessage(ACLMessage.REQUEST);
 
+                    for (AID investor : this.agent.investorTrust.keySet()) {
+                        cfp.addReceiver(investor);
+                    }
+
+                    // TODO - USAR AQUI ONTOLOGIAS??
+                    cfp.setContent("rate-request");
+                    cfp.setConversationId("rate");
+
+                    cfp.setReplyWith("ratereq" + System.currentTimeMillis()); // Unique value
+                    myAgent.send(cfp);
+
+                    // Prepare the template to get confirmations
+                    MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchConversationId("rate"),
+                            MessageTemplate.MatchInReplyTo(cfp.getReplyWith()));
+
+                    step = 1;
+
+                    break;
+
+                // Receive replys with the rate of each investor
+                case 1:
+                    // Check if investor received the information
+                    MessageTemplate mm = MessageTemplate.and(MessageTemplate.MatchConversationId("rate"),
+                            MessageTemplate.MatchPerformative(ACLMessage.INFORM));
+
+                    while (replies < investorTrust.size()) {
+                        ACLMessage reply = myAgent.receive(mm);
+
+                        // Reply received
+                        if (reply != null) {
+
+                            // TODO - GUARDAR AQUI INFORMAÇÃO DE RATE/TRUST RECEBIDA DE CADA INVESTOR
+
+
+                            replies++;
+                        } else {
+                            block();
+                        }
+                    }
+
+                    // TODO - COM CICLO FOR, DETERMINAR AQUI NESTE STEP, APÓS SE RECEBEREM TODOS OS REPLIES, QUAL O INVESTOR A DAR FOLLOW
+
+                    replies = 0;
+                    step = 2;
+
+                    break;
+
+                // Send follow request to the most trusty investor
+                case 2:
+                    ACLMessage cfp3 = new ACLMessage(ACLMessage.REQUEST);
+
+                    // TODO - FAZER AQUI cfp.addreceiver do investor a quem se vai pedir para dar follow
+
+
+
+                    cfp3.setContent("follow-request");
+                    cfp3.setConversationId("follow");
+
+                    cfp3.setReplyWith("followreq" + System.currentTimeMillis()); // Unique value
+                    myAgent.send(cfp3);
+
+                    // Prepare the template to get confirmations
+                    mt = MessageTemplate.and(MessageTemplate.MatchConversationId("follow-req"),
+                            MessageTemplate.MatchInReplyTo(cfp3.getReplyWith()));
+
+                    step = 3;
+
+                    break;
+
+                // Send unfollow request
+                case 3:
+                    ACLMessage cfp2 = new ACLMessage(ACLMessage.REQUEST);
+
+                    // TODO - DETERMINAR AQUI A QUEM ENVIR UNFOLLOW REQUEST
+
+                    /*for(int i = 0 ; i < following.size() ; i++) {
+                        boolean found = false;
+
+                        for(int j = 0 ; j < 2 ; j++) {
+                            if(top[j] == null) break;
+
+                            if(investorAgents[top[j].getIndex()].equals( following.get(i) )){
+                                found = true;
+                                break;
+                            }
+                        }
+                        if(!found) {
+                            cfp2.addReceiver(following.get(i));
+                            unfollow(following.get(i));
+                        }
+                    }*/
+
+                    cfp2.setContent("unfollow-request");
+                    cfp2.setConversationId("unfollow");
+
+                    cfp2.setReplyWith("unfollowreq" + System.currentTimeMillis()); // Unique value
+                    myAgent.send(cfp2);
+                    // Prepare the template to get confirmations
+                    mt = MessageTemplate.and(MessageTemplate.MatchConversationId("unfollow-req"),
+                            MessageTemplate.MatchInReplyTo(cfp2.getReplyWith()));
+
+                    step = 0;
+            }
         }
     }
 
 
-
-    /*private class PlayerTrade extends SimpleBehaviour {
-        private boolean finished = false;
-
-        public void action(){
-            // TODO
-            // Receive reports
-            // For every report received update trust in each investor
-
-            // Withdraw - send playerId (+capital) (-investedAmount)
-            // Invest - send playerId and amount (-capital) (+investedAmount)
-
-
-
-        }
-
-        public boolean done(){
-            return finished;
-        }
-    }*/
 }
