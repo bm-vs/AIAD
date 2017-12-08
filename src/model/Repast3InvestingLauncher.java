@@ -25,18 +25,22 @@ import static utils.Settings.*;
 public class Repast3InvestingLauncher extends Repast3Launcher {
 	private ContainerController mainContainer;
 	private ContainerController agentContainer;
-	private OpenSequenceGraph plot;
+	private OpenSequenceGraph investorPlot;
+	private OpenSequenceGraph playerPlot;
 
 	// Data
 	private Market market;
 	private InformerAgent informer;
-	private List<InvestorAgent> investors;
+	private ArrayList<InvestorAgent> investors;
+	private ArrayList<PlayerAgent> players;
 
 	// Simulation paramaters
 	private int nInvestors = 1;
-	private float initialCapital = 10000;
+	private float initialInvestorCapital = 10000;
+	private int nPlayers = 1;
+	private float initialPlayerCapital = 1000;
 	private boolean detailedInfo = false;
-	private String customInvestors = "test1";
+	private String customInvestors = "";
 
 	public Repast3InvestingLauncher() {
 		super();
@@ -47,8 +51,16 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 		return nInvestors;
 	}
 
-	public float getInitialCapital() {
-		return initialCapital;
+    public int getnPlayers() {
+        return nPlayers;
+    }
+
+    public float getInitialInvestorCapital() {
+		return initialInvestorCapital;
+	}
+
+	public float getInitialPlayerCapital() {
+		return initialPlayerCapital;
 	}
 
 	public boolean getDetailedInfo() {
@@ -61,8 +73,16 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 		nInvestors = n;
 	}
 
-	public void setInitialCapital(float n) {
-		initialCapital = n;
+    public void setnPlayers(int nPlayers) {
+        this.nPlayers = nPlayers;
+    }
+
+    public void setInitialInvestorCapital(float n) {
+		initialInvestorCapital = n;
+	}
+
+	public void setInitialPlayerCapital(float initialPlayerCapital) {
+		this.initialPlayerCapital = initialPlayerCapital;
 	}
 
 	public void setDetailedInfo(boolean b) {
@@ -73,7 +93,7 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 
 	@Override
 	public String[] getInitParam() {
-		return new String[] {"nInvestors", "initialCapital", "detailedInfo", "customInvestors"};
+		return new String[] {"nInvestors", "initialInvestorCapital", "nPlayers", "initialPlayerCapital", "detailedInfo", "customInvestors"};
 	}
 
 	@Override
@@ -93,6 +113,7 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 	
 	private void launchAgents() {
 		investors = new ArrayList<>();
+		players = new ArrayList<>();
 		int nSectors = market.getNSectors();
 		
 		try {
@@ -114,10 +135,20 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 						skill.add(r.nextInt(INVESTOR_MAX_SKILL));
 					}
 
-					InvestorAgent agent = new InvestorAgent(id, initialCapital, skill);
+					InvestorAgent agent = new InvestorAgent(id, initialInvestorCapital, skill);
 					agentContainer.acceptNewAgent(id, agent).start();
 					investors.add(agent);
 				}
+			}
+
+			// Create players
+            System.out.println("Random Players");
+			for (int i = 0; i < nPlayers; i++) {
+				String id = "Player" + i;
+				PlayerAgent agent = new PlayerAgent(id, initialPlayerCapital);
+				agentContainer.acceptNewAgent(id, agent).start();
+				System.out.println(agent);
+				players.add(agent);
 			}
 
 			// Create informer agent
@@ -136,36 +167,58 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 	}
 
 	private void buildAndScheduleDisplay() {
-		// graph
-		if (plot != null) {
-			plot.dispose();
+		// Investor Graph
+		if (investorPlot != null) {
+            investorPlot.dispose();
 		}
-		plot = new OpenSequenceGraph("Investment success", this);
-		plot.setAxisTitles("time", "capital");
+        investorPlot = new OpenSequenceGraph("Investor profit", this);
+        investorPlot.setAxisTitles("time", "capital");
 
 		for (int i = 0; i < investors.size(); i++) {
 			InvestorAgent agent = investors.get(i);
-			plot.addSequence(agent.getId() + "(T)", new Sequence() {
+            investorPlot.addSequence(agent.getId() + "(T)", new Sequence() {
 				public double getSValue() {
 					return agent.getTotalCapital();
 				}
 			});
 			if (detailedInfo) {
-				plot.addSequence(agent.getId() + "(C)", new Sequence() {
+                investorPlot.addSequence(agent.getId() + "(C)", new Sequence() {
 					public double getSValue() {
 						return agent.getCapital();
 					}
 				});
-				plot.addSequence(agent.getId() + "(P)", new Sequence() {
+                investorPlot.addSequence(agent.getId() + "(P)", new Sequence() {
 					public double getSValue() {
 						return agent.getPortfolioValue();
 					}
 				});
 			}
-			plot.display();
+            investorPlot.display();
 		}
 
-		getSchedule().scheduleActionAtInterval(100, plot, "step", Schedule.LAST);
+		getSchedule().scheduleActionAtInterval(100, investorPlot, "step", Schedule.LAST);
+
+
+		// Player Graph
+        if (playerPlot != null) {
+            playerPlot.dispose();
+        }
+        playerPlot = new OpenSequenceGraph("Player profit", this);
+        playerPlot.setAxisTitles("time", "capital");
+
+        for (int i = 0; i < players.size(); i++) {
+            PlayerAgent agent = players.get(i);
+            playerPlot.addSequence(agent.getId() + "(T)", new Sequence() {
+                public double getSValue() {
+                    return agent.getTotalCapital();
+                }
+            });
+            playerPlot.display();
+        }
+
+        getSchedule().scheduleActionAtInterval(100, playerPlot, "step", Schedule.LAST);
+
+
 	}
 
 	// Reads investor type file using customInvestors
