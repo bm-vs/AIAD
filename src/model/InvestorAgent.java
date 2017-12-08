@@ -33,13 +33,26 @@ public class InvestorAgent extends Agent implements Serializable {
     private float capital;
     private float portfolioValue;
     private ArrayList<Integer> skill; // represents the knowledge (0-10) of each sector (0-5)
-    private int dynamic;
+    private int skillChangePeriod;
+    private ArrayList<ArrayList<Integer>> nextSkills;
+    private boolean repeat;
 
-    public InvestorAgent(String id, float initialCapital, ArrayList<Integer> skill, int dynamic) {
+    public InvestorAgent(String id, float initialCapital, ArrayList<Integer> skill, int skillChangePeriod) {
         this.id = id;
         this.capital = initialCapital;
         this.skill = skill;
-        this.dynamic = dynamic;
+        this.skillChangePeriod = skillChangePeriod;
+        this.active = new ArrayList<>();
+        this.closed = new ArrayList<>();
+    }
+
+    public InvestorAgent(String id, float initialCapital, ArrayList<Integer> skill, int skillChangePeriod, ArrayList<ArrayList<Integer>> nextSkills, boolean repeat) {
+        this.id = id;
+        this.capital = initialCapital;
+        this.skill = skill;
+        this.skillChangePeriod = skillChangePeriod;
+        this.repeat = repeat;
+        this.nextSkills = nextSkills;
         this.active = new ArrayList<>();
         this.closed = new ArrayList<>();
     }
@@ -64,14 +77,26 @@ public class InvestorAgent extends Agent implements Serializable {
         return skill;
     }
 
-    public int getDynamic() {
-        return dynamic;
+    public ArrayList<ArrayList<Integer>> getNextSkills() {
+        return nextSkills;
+    }
+
+    public int getSkillChangePeriod() {
+        return skillChangePeriod;
+    }
+
+    public boolean getRepeat() {
+        return repeat;
     }
 
     public void setSkill(ArrayList<Integer> skill) { this.skill = skill; }
 
     public void setSkill(int index, int skill) {
         this.skill.set(index, skill);
+    }
+
+    public void setNextSkills(ArrayList<ArrayList<Integer>> nextSkills) {
+        this.nextSkills = nextSkills;
     }
 
     // Updates the sum of values of every stock
@@ -112,7 +137,7 @@ public class InvestorAgent extends Agent implements Serializable {
         // Behaviours
         addBehaviour(new InvestorSubscribe(this));
         addBehaviour(new InvestorTrade(this));
-        if (dynamic != STATIC_AGENT) {
+        if (skillChangePeriod != STATIC_AGENT) {
             addBehaviour(new InvestorChangeSkill(this));
         }
     }
@@ -193,8 +218,6 @@ public class InvestorAgent extends Agent implements Serializable {
 
         // Buys/sells stock according to current prices and predicted prices
         private void moveStock(ArrayList<StockPrice> prices) {
-            sellAll(prices);
-
             // Get top growth stock
             ArrayList<StockPrice> predictedGrowth = new ArrayList<>();
             for (StockPrice price: prices) {
@@ -205,39 +228,83 @@ public class InvestorAgent extends Agent implements Serializable {
             Collections.sort(predictedGrowth, new StockPrice.StockPriceComparator());
             Collections.reverse(predictedGrowth);
 
-            // Buy stock
-            int i = 0;
-            float amountPerStock = capital/PORTFOLIO_SIZE;
-            for (StockPrice price: predictedGrowth) {
-                // Invests an equal amount on the stocks with highest predicted growth
-                if (i < PORTFOLIO_SIZE) {
-                    int quantity = (int)(amountPerStock/price.getCurrPrice());
-                    if (quantity > 0) {
-                        Transaction t = new Transaction(price.getSymbol(), price.getCurrPrice(), quantity);
-                        active.add(t);
-                        capital -= price.getCurrPrice() * quantity + TRANSACTION_TAX;
+            // Get lowest growth stock owned
+            ArrayList<StockPrice> currentOwned = new ArrayList<>();
+            for (Transaction t: active) {
+                for (StockPrice stock: predictedGrowth) {
+                    if (t.getStock().equals(stock.getSymbol())) {
+                        currentOwned.add(stock);
                     }
-                    i++;
+                }
+            }
+            Collections.sort(currentOwned, new StockPrice.StockPriceComparator());
+
+            // Decide stock to buy and sell
+            ArrayList<StockPrice> union = new ArrayList<>(predictedGrowth.subList(0, PORTFOLIO_SIZE));
+            union.addAll(currentOwned);
+            ArrayList<StockPrice> intersection = new ArrayList<>(predictedGrowth.subList(0, PORTFOLIO_SIZE));
+            intersection.retainAll(currentOwned);
+
+            // Get top growth stock not currently owned
+            ArrayList<StockPrice> toBuy = new ArrayList<>(predictedGrowth.subList(0, PORTFOLIO_SIZE));
+            toBuy.removeAll(intersection);
+
+            // Get worse growth stock currently owned
+            ArrayList<StockPrice> toSell = new ArrayList<>(currentOwned);
+            toSell.removeAll(intersection);
+
+            int size = toBuy.size() < toSell.size() ? toBuy.size(): toSell.size();
+            // Sell stock owned with lowest growth potential
+            for (int i = 0; i < size; i++) {
+                sellStock(toSell.get(i));
+            }
+
+            // Buy stock with highest growth potential to replace the ones sold
+            for (int i = 0; i < size; i++) {
+                buyStock(toBuy.get(i), getTotalCapital()/PORTFOLIO_SIZE);
+            }
+
+            // Buy stock with biggest growth with the remaining capital
+            float amountPerStock = capital/PORTFOLIO_SIZE;
+            for (int i = 0; i < PORTFOLIO_SIZE; i++) {
+                buyStock(predictedGrowth.get(i), amountPerStock);
+            }
+        }
+
+        // Buy stock
+        private void buyStock(StockPrice stock, float amountPerStock) {
+            int quantity = (int)(amountPerStock/stock.getCurrPrice());
+            if (quantity > 0) {
+                boolean transactionFound = false;
+                for (Transaction t: active) {
+                    if (t.getStock().equals(stock.getSymbol())) {
+                        t.setQuantity(t.getQuantity() + quantity);
+                        capital -= stock.getCurrPrice() * quantity;
+                        transactionFound = true;
+                    }
+                }
+
+                if (!transactionFound) {
+                    Transaction t = new Transaction(stock.getSymbol(), stock.getCurrPrice(), quantity);
+                    active.add(t);
+                    capital -= stock.getCurrPrice() * quantity + TRANSACTION_TAX;
                 }
             }
         }
 
-        // Liquidates all open positions
-        private void sellAll(ArrayList<StockPrice> prices) {
+        // Sell stock
+        private void sellStock(StockPrice stock) {
             for (Iterator<Transaction> it = active.iterator(); it.hasNext(); ) {
                 Transaction t = it.next();
-                float currentPrice = t.getBuyPrice();
-                for (StockPrice stock: prices) {
-                    if (stock.getSymbol().equals(t.getStock())) {
-                        currentPrice = stock.getCurrPrice();
-                        break;
-                    }
+                if (t.getStock().equals(stock.getSymbol())) {
+                    float currentPrice = stock.getCurrPrice();
+                    t.setSellPrice(currentPrice);
+                    t.closeTransaction();
+                    closed.add(t);
+                    it.remove();
+                    capital += t.getQuantity()*currentPrice;
+                    break;
                 }
-                t.setSellPrice(currentPrice);
-                t.closeTransaction();
-                closed.add(t);
-                it.remove();
-                capital += t.getQuantity()*currentPrice;
             }
         }
     }
@@ -246,33 +313,52 @@ public class InvestorAgent extends Agent implements Serializable {
         private InvestorAgent agent;
 
         public InvestorChangeSkill(InvestorAgent a) {
-            super(a, a.getDynamic());
+            super(a, a.getSkillChangePeriod());
             agent = a;
         }
 
         public void onTick() {
             try {
-                Random r = new Random();
+                // Change current skill
+                boolean changed = false;
                 ArrayList<Integer> newSkill = new ArrayList<>();
-                for (int i = 0; i < agent.getSkill().size(); i++) {
-                    newSkill.add(r.nextInt(INVESTOR_MAX_SKILL));
+                if (agent.getNextSkills() == null) {
+                    Random r = new Random();
+                    for (int i = 0; i < agent.getSkill().size(); i++) {
+                        newSkill.add(r.nextInt(INVESTOR_MAX_SKILL));
+                    }
+                    changed = true;
+                }
+                else if (agent.getNextSkills().size() != 0) {
+                    newSkill = agent.getNextSkills().get(0);
+
+                    ArrayList<ArrayList<Integer>> s = new ArrayList<>(agent.getNextSkills().subList(1, agent.getNextSkills().size()));
+                    // Add current skill to end to nextSkills list if repeat
+                    if (agent.getRepeat()) {
+                        s.add(agent.getSkill());
+                    }
+                    agent.setNextSkills(s);
+                    agent.setSkill(newSkill); // Make agent skill the first element of nextSkills
+                    changed = true;
                 }
 
-                ACLMessage updateInvestor = new ACLMessage(ACLMessage.PROPOSE);
-                updateInvestor.addReceiver(new AID("Informer", AID.ISLOCALNAME));
-                updateInvestor.setLanguage(codec.getName());
-                updateInvestor.setOntology(stockMarketOntology.getName());
+                if (changed) {
+                    ACLMessage updateInvestor = new ACLMessage(ACLMessage.PROPOSE);
+                    updateInvestor.addReceiver(new AID("Informer", AID.ISLOCALNAME));
+                    updateInvestor.setLanguage(codec.getName());
+                    updateInvestor.setOntology(stockMarketOntology.getName());
 
-                InvestorInfo investorInfo = new InvestorInfo(agent.getId(), newSkill);
-                getContentManager().fillContent(updateInvestor, investorInfo);
-                agent.send(updateInvestor);
+                    InvestorInfo investorInfo = new InvestorInfo(agent.getId(), newSkill);
+                    getContentManager().fillContent(updateInvestor, investorInfo);
+                    agent.send(updateInvestor);
 
-                // Only accept subscribe messages
-                MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.ACCEPT_PROPOSAL), MessageTemplate.MatchSender(new AID("Informer", AID.ISLOCALNAME)));
-                ACLMessage reply = receive(mt);
-                if (reply != null) {
-                    agent.setSkill(newSkill);
-                    System.out.println(id + " updated ok");
+                    // Only accept proposal messages
+                    MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.ACCEPT_PROPOSAL), MessageTemplate.MatchSender(new AID("Informer", AID.ISLOCALNAME)));
+                    ACLMessage reply = receive(mt);
+                    if (reply != null) {
+                        agent.setSkill(newSkill);
+                        System.out.println(id + " updated ok");
+                    }
                 }
             }
             catch (Exception e) {

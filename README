@@ -1,5 +1,13 @@
 Get historical data at:
 http://finance.google.com/finance/historical?output=csv&q=SYMBOL
 
-Test file format:
-[id]-[initalCapital]-[skillTELECOM(0-10)].[skillFINANCIAL].[skillINDUSTRIAL].[skillENERGY].[skillHEALTHCARE].[skillTECH]-[profile(0-2)]
+Test file format (without \n):
+<id>-
+<initalCapital>-
+<skill>-
+<skillChangePeriod>- (0 for no change)
+<repeat>- (if change loops or not)
+<skill1>_<skill2>_<skill3>... (list of skills to iterate by)
+
+<skill> blocks have the format:
+<skillTELECOM>;<skillFINANCIAL>;<skillINDUSTRIAL>;<skillENERGY>;<skillHEALTHCARE>;<skillTECH>

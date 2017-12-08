@@ -26,7 +26,7 @@ public class Settings {
     public static final int TECH = 5;
 
     // Market tax
-    public static final float TRANSACTION_TAX = 0.5f;
+    public static final float TRANSACTION_TAX = 0.75f;
 
     // Stock lists to be used for a market
     // Basic - top 5 market cap for each sector from S&P 500
