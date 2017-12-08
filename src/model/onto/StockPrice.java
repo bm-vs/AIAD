@@ -67,6 +67,10 @@ public class StockPrice implements Concept {
         this.estimatedPrice = estimatedPrice;
     }
 
+    public float getGrowth() {
+        return (estimatedPrice-currPrice)/currPrice;
+    }
+
     // Introduces error into hour price according to skill
     // The higher the skill the more accurate the return value is
     public void addError(int skill) {
@@ -95,10 +99,7 @@ public class StockPrice implements Concept {
             StockPrice s1 = (StockPrice) o1;
             StockPrice s2 = (StockPrice) o2;
 
-            float s1Growth = (s1.getEstimatedPrice()-s1.getCurrPrice())/s1.getCurrPrice();
-            float s2Growth = (s2.getEstimatedPrice()-s2.getCurrPrice())/s2.getCurrPrice();
-
-            return Float.compare(s1Growth, s2Growth);
+            return Float.compare(s1.getGrowth(), s2.getGrowth());
         }
     }
 }

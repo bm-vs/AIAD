@@ -193,8 +193,6 @@ public class InvestorAgent extends Agent implements Serializable {
 
         // Buys/sells stock according to current prices and predicted prices
         private void moveStock(ArrayList<StockPrice> prices) {
-            sellAll(prices);
-
             // Get top growth stock
             ArrayList<StockPrice> predictedGrowth = new ArrayList<>();
             for (StockPrice price: prices) {
@@ -205,39 +203,83 @@ public class InvestorAgent extends Agent implements Serializable {
             Collections.sort(predictedGrowth, new StockPrice.StockPriceComparator());
             Collections.reverse(predictedGrowth);
 
-            // Buy stock
-            int i = 0;
-            float amountPerStock = capital/PORTFOLIO_SIZE;
-            for (StockPrice price: predictedGrowth) {
-                // Invests an equal amount on the stocks with highest predicted growth
-                if (i < PORTFOLIO_SIZE) {
-                    int quantity = (int)(amountPerStock/price.getCurrPrice());
-                    if (quantity > 0) {
-                        Transaction t = new Transaction(price.getSymbol(), price.getCurrPrice(), quantity);
-                        active.add(t);
-                        capital -= price.getCurrPrice() * quantity + TRANSACTION_TAX;
+            // Get lowest growth stock owned
+            ArrayList<StockPrice> currentOwned = new ArrayList<>();
+            for (Transaction t: active) {
+                for (StockPrice stock: predictedGrowth) {
+                    if (t.getStock().equals(stock.getSymbol())) {
+                        currentOwned.add(stock);
                     }
-                    i++;
+                }
+            }
+            Collections.sort(currentOwned, new StockPrice.StockPriceComparator());
+
+            // Decide stock to buy and sell
+            ArrayList<StockPrice> union = new ArrayList<>(predictedGrowth.subList(0, PORTFOLIO_SIZE));
+            union.addAll(currentOwned);
+            ArrayList<StockPrice> intersection = new ArrayList<>(predictedGrowth.subList(0, PORTFOLIO_SIZE));
+            intersection.retainAll(currentOwned);
+
+            // Get top growth stock not currently owned
+            ArrayList<StockPrice> toBuy = new ArrayList<>(predictedGrowth.subList(0, PORTFOLIO_SIZE));
+            toBuy.removeAll(intersection);
+
+            // Get worse growth stock currently owned
+            ArrayList<StockPrice> toSell = new ArrayList<>(currentOwned);
+            toSell.removeAll(intersection);
+
+            int size = toBuy.size() < toSell.size() ? toBuy.size(): toSell.size();
+            // Sell stock owned with lowest growth potential
+            for (int i = 0; i < size; i++) {
+                sellStock(toSell.get(i));
+            }
+
+            // Buy stock with highest growth potential to replace the ones sold
+            for (int i = 0; i < size; i++) {
+                buyStock(toBuy.get(i), getTotalCapital()/PORTFOLIO_SIZE);
+            }
+
+            // Buy stock with biggest growth with the remaining capital
+            float amountPerStock = capital/PORTFOLIO_SIZE;
+            for (int i = 0; i < PORTFOLIO_SIZE; i++) {
+                buyStock(predictedGrowth.get(i), amountPerStock);
+            }
+        }
+
+        // Buy stock
+        private void buyStock(StockPrice stock, float amountPerStock) {
+            int quantity = (int)(amountPerStock/stock.getCurrPrice());
+            if (quantity > 0) {
+                boolean transactionFound = false;
+                for (Transaction t: active) {
+                    if (t.getStock().equals(stock.getSymbol())) {
+                        t.setQuantity(t.getQuantity() + quantity);
+                        capital -= stock.getCurrPrice() * quantity;
+                        transactionFound = true;
+                    }
+                }
+
+                if (!transactionFound) {
+                    Transaction t = new Transaction(stock.getSymbol(), stock.getCurrPrice(), quantity);
+                    active.add(t);
+                    capital -= stock.getCurrPrice() * quantity + TRANSACTION_TAX;
                 }
             }
         }
 
-        // Liquidates all open positions
-        private void sellAll(ArrayList<StockPrice> prices) {
+        // Sell stock
+        private void sellStock(StockPrice stock) {
             for (Iterator<Transaction> it = active.iterator(); it.hasNext(); ) {
                 Transaction t = it.next();
-                float currentPrice = t.getBuyPrice();
-                for (StockPrice stock: prices) {
-                    if (stock.getSymbol().equals(t.getStock())) {
-                        currentPrice = stock.getCurrPrice();
-                        break;
-                    }
+                if (t.getStock().equals(stock.getSymbol())) {
+                    float currentPrice = stock.getCurrPrice();
+                    t.setSellPrice(currentPrice);
+                    t.closeTransaction();
+                    closed.add(t);
+                    it.remove();
+                    capital += t.getQuantity()*currentPrice;
+                    break;
                 }
-                t.setSellPrice(currentPrice);
-                t.closeTransaction();
-                closed.add(t);
-                it.remove();
-                capital += t.getQuantity()*currentPrice;
             }
         }
     }
