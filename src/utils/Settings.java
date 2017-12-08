@@ -8,9 +8,10 @@ public class Settings {
     // Investor agent
     public static final int INVESTOR_MAX_SKILL = 11;
     public static final int PORTFOLIO_SIZE = 10;
+    public static final int STATIC_AGENT = 0;
 
     // Informer agent
-    public static final int TICK_PERIOD = 100;
+    public static final int BROADCAST_PERIOD = 20;
 
     // Market times
     public static final int OPEN_TIME = 9;

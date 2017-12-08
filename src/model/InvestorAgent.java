@@ -16,6 +16,7 @@ import sajas.core.AID;
 import sajas.core.Agent;
 import sajas.core.behaviours.CyclicBehaviour;
 import sajas.core.behaviours.SimpleBehaviour;
+import sajas.core.behaviours.TickerBehaviour;
 import sajas.domain.DFService;
 import model.onto.StockPrice;
 import static utils.Settings.*;
@@ -32,13 +33,13 @@ public class InvestorAgent extends Agent implements Serializable {
     private float capital;
     private float portfolioValue;
     private ArrayList<Integer> skill; // represents the knowledge (0-10) of each sector (0-5)
-    private int profile;
+    private int dynamic;
 
-    public InvestorAgent(String id, float initialCapital, ArrayList<Integer> skill) {
+    public InvestorAgent(String id, float initialCapital, ArrayList<Integer> skill, int dynamic) {
         this.id = id;
         this.capital = initialCapital;
         this.skill = skill;
-        this.profile = profile;
+        this.dynamic = dynamic;
         this.active = new ArrayList<>();
         this.closed = new ArrayList<>();
     }
@@ -63,8 +64,14 @@ public class InvestorAgent extends Agent implements Serializable {
         return skill;
     }
 
-    public int getProfile() {
-        return profile;
+    public int getDynamic() {
+        return dynamic;
+    }
+
+    public void setSkill(ArrayList<Integer> skill) { this.skill = skill; }
+
+    public void setSkill(int index, int skill) {
+        this.skill.set(index, skill);
     }
 
     // Updates the sum of values of every stock
@@ -105,6 +112,9 @@ public class InvestorAgent extends Agent implements Serializable {
         // Behaviours
         addBehaviour(new InvestorSubscribe(this));
         addBehaviour(new InvestorTrade(this));
+        if (dynamic != STATIC_AGENT) {
+            addBehaviour(new InvestorChangeSkill(this));
+        }
     }
 
     @Override
@@ -228,6 +238,45 @@ public class InvestorAgent extends Agent implements Serializable {
                 closed.add(t);
                 it.remove();
                 capital += t.getQuantity()*currentPrice;
+            }
+        }
+    }
+
+    private class InvestorChangeSkill extends TickerBehaviour {
+        private InvestorAgent agent;
+
+        public InvestorChangeSkill(InvestorAgent a) {
+            super(a, a.getDynamic());
+            agent = a;
+        }
+
+        public void onTick() {
+            try {
+                Random r = new Random();
+                ArrayList<Integer> newSkill = new ArrayList<>();
+                for (int i = 0; i < agent.getSkill().size(); i++) {
+                    newSkill.add(r.nextInt(INVESTOR_MAX_SKILL));
+                }
+
+                ACLMessage updateInvestor = new ACLMessage(ACLMessage.PROPOSE);
+                updateInvestor.addReceiver(new AID("Informer", AID.ISLOCALNAME));
+                updateInvestor.setLanguage(codec.getName());
+                updateInvestor.setOntology(stockMarketOntology.getName());
+
+                InvestorInfo investorInfo = new InvestorInfo(agent.getId(), newSkill);
+                getContentManager().fillContent(updateInvestor, investorInfo);
+                agent.send(updateInvestor);
+
+                // Only accept subscribe messages
+                MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.ACCEPT_PROPOSAL), MessageTemplate.MatchSender(new AID("Informer", AID.ISLOCALNAME)));
+                ACLMessage reply = receive(mt);
+                if (reply != null) {
+                    agent.setSkill(newSkill);
+                    System.out.println(id + " updated ok");
+                }
+            }
+            catch (Exception e) {
+                e.printStackTrace();
             }
         }
     }

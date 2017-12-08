@@ -39,6 +39,7 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 	private float initialInvestorCapital = 10000;
 	private int nPlayers = 1;
 	private float initialPlayerCapital = 1000;
+    private int dynamicInvestors = 0;
 	private boolean detailedInfo = false;
 	private String customInvestors = "";
 
@@ -63,6 +64,8 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 		return initialPlayerCapital;
 	}
 
+	public int getDynamicInvestors() { return dynamicInvestors; }
+
 	public boolean getDetailedInfo() {
 	    return detailedInfo;
 	}
@@ -85,7 +88,11 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 		this.initialPlayerCapital = initialPlayerCapital;
 	}
 
-	public void setDetailedInfo(boolean b) {
+    public void setDynamicInvestors(int dynamicInvestors) {
+        this.dynamicInvestors = dynamicInvestors;
+    }
+
+    public void setDetailedInfo(boolean b) {
 	    detailedInfo = b;
 	}
 
@@ -93,7 +100,7 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 
 	@Override
 	public String[] getInitParam() {
-		return new String[] {"nInvestors", "initialInvestorCapital", "nPlayers", "initialPlayerCapital", "detailedInfo", "customInvestors"};
+		return new String[] {"nInvestors", "initialInvestorCapital", "nPlayers", "initialPlayerCapital", "dynamicInvestors", "detailedInfo", "customInvestors"};
 	}
 
 	@Override
@@ -135,7 +142,7 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 						skill.add(r.nextInt(INVESTOR_MAX_SKILL));
 					}
 
-					InvestorAgent agent = new InvestorAgent(id, initialInvestorCapital, skill);
+					InvestorAgent agent = new InvestorAgent(id, initialInvestorCapital, skill, dynamicInvestors);
 					agentContainer.acceptNewAgent(id, agent).start();
 					investors.add(agent);
 				}
@@ -147,7 +154,6 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 				String id = "Player" + i;
 				PlayerAgent agent = new PlayerAgent(id, initialPlayerCapital);
 				agentContainer.acceptNewAgent(id, agent).start();
-				System.out.println(agent);
 				players.add(agent);
 			}
 
@@ -242,7 +248,9 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
                 	skill.add(Integer.parseInt(s));
 				}
 
-                custom.add(new InvestorAgent(id, capital, skill));
+				int dynamic = Integer.parseInt(info[3]);
+
+                custom.add(new InvestorAgent(id, capital, skill, dynamic));
             }
             fileReader.close();
             investors = custom;

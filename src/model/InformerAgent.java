@@ -69,6 +69,7 @@ public class InformerAgent extends Agent {
         // Behaviours
         addBehaviour(new InformerSubscribe(this));
         addBehaviour(new InformerBroadcast(this));
+        addBehaviour(new InformerUpdate(this));
     }
 
     @Override
@@ -82,7 +83,7 @@ public class InformerAgent extends Agent {
 
     // Behaviours
     private class InformerSubscribe extends CyclicBehaviour {
-        public InformerSubscribe(Agent a) {
+        public InformerSubscribe(InformerAgent a) {
             super(a);
         }
 
@@ -112,8 +113,8 @@ public class InformerAgent extends Agent {
     }
 
     private class InformerBroadcast extends TickerBehaviour {
-        public InformerBroadcast(Agent a) {
-            super(a, TICK_PERIOD);
+        public InformerBroadcast(InformerAgent a) {
+            super(a, BROADCAST_PERIOD);
         }
 
         public void onTick() {
@@ -167,6 +168,38 @@ public class InformerAgent extends Agent {
                 currentTime.add(Calendar.HOUR_OF_DAY, 1);
             }
 
+        }
+    }
+
+    private class InformerUpdate extends CyclicBehaviour {
+        public InformerUpdate(InformerAgent a) {
+            super(a);
+        }
+
+        public void action() {
+            // Only accept proposal messages
+            MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.PROPOSE);
+
+            // Handle update of investors
+            ACLMessage updates = receive(mt);
+            if (updates != null) {
+                try {
+                    // Update info about matched investor
+                    InvestorInfo investor = (InvestorInfo) getContentManager().extractContent(updates);
+                    for (InvestorInfo inv: investors) {
+                        if (inv.getId().equals(investor.getId())) {
+                            inv.setSkill(investor.getSkill());
+                            System.out.println(inv + " updated");
+
+                            ACLMessage reply = updates.createReply();
+                            reply.setPerformative(ACLMessage.ACCEPT_PROPOSAL);
+                            send(reply);
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
