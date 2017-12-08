@@ -33,13 +33,26 @@ public class InvestorAgent extends Agent implements Serializable {
     private float capital;
     private float portfolioValue;
     private ArrayList<Integer> skill; // represents the knowledge (0-10) of each sector (0-5)
-    private int dynamic;
+    private int skillChangePeriod;
+    private ArrayList<ArrayList<Integer>> nextSkills;
+    private boolean repeat;
 
-    public InvestorAgent(String id, float initialCapital, ArrayList<Integer> skill, int dynamic) {
+    public InvestorAgent(String id, float initialCapital, ArrayList<Integer> skill, int skillChangePeriod) {
         this.id = id;
         this.capital = initialCapital;
         this.skill = skill;
-        this.dynamic = dynamic;
+        this.skillChangePeriod = skillChangePeriod;
+        this.active = new ArrayList<>();
+        this.closed = new ArrayList<>();
+    }
+
+    public InvestorAgent(String id, float initialCapital, ArrayList<Integer> skill, int skillChangePeriod, ArrayList<ArrayList<Integer>> nextSkills, boolean repeat) {
+        this.id = id;
+        this.capital = initialCapital;
+        this.skill = skill;
+        this.skillChangePeriod = skillChangePeriod;
+        this.repeat = repeat;
+        this.nextSkills = nextSkills;
         this.active = new ArrayList<>();
         this.closed = new ArrayList<>();
     }
@@ -64,14 +77,26 @@ public class InvestorAgent extends Agent implements Serializable {
         return skill;
     }
 
-    public int getDynamic() {
-        return dynamic;
+    public ArrayList<ArrayList<Integer>> getNextSkills() {
+        return nextSkills;
+    }
+
+    public int getSkillChangePeriod() {
+        return skillChangePeriod;
+    }
+
+    public boolean getRepeat() {
+        return repeat;
     }
 
     public void setSkill(ArrayList<Integer> skill) { this.skill = skill; }
 
     public void setSkill(int index, int skill) {
         this.skill.set(index, skill);
+    }
+
+    public void setNextSkills(ArrayList<ArrayList<Integer>> nextSkills) {
+        this.nextSkills = nextSkills;
     }
 
     // Updates the sum of values of every stock
@@ -112,7 +137,7 @@ public class InvestorAgent extends Agent implements Serializable {
         // Behaviours
         addBehaviour(new InvestorSubscribe(this));
         addBehaviour(new InvestorTrade(this));
-        if (dynamic != STATIC_AGENT) {
+        if (skillChangePeriod != STATIC_AGENT) {
             addBehaviour(new InvestorChangeSkill(this));
         }
     }
@@ -288,33 +313,52 @@ public class InvestorAgent extends Agent implements Serializable {
         private InvestorAgent agent;
 
         public InvestorChangeSkill(InvestorAgent a) {
-            super(a, a.getDynamic());
+            super(a, a.getSkillChangePeriod());
             agent = a;
         }
 
         public void onTick() {
             try {
-                Random r = new Random();
+                // Change current skill
+                boolean changed = false;
                 ArrayList<Integer> newSkill = new ArrayList<>();
-                for (int i = 0; i < agent.getSkill().size(); i++) {
-                    newSkill.add(r.nextInt(INVESTOR_MAX_SKILL));
+                if (agent.getNextSkills() == null) {
+                    Random r = new Random();
+                    for (int i = 0; i < agent.getSkill().size(); i++) {
+                        newSkill.add(r.nextInt(INVESTOR_MAX_SKILL));
+                    }
+                    changed = true;
+                }
+                else if (agent.getNextSkills().size() != 0) {
+                    newSkill = agent.getNextSkills().get(0);
+
+                    ArrayList<ArrayList<Integer>> s = new ArrayList<>(agent.getNextSkills().subList(1, agent.getNextSkills().size()));
+                    // Add current skill to end to nextSkills list if repeat
+                    if (agent.getRepeat()) {
+                        s.add(agent.getSkill());
+                    }
+                    agent.setNextSkills(s);
+                    agent.setSkill(newSkill); // Make agent skill the first element of nextSkills
+                    changed = true;
                 }
 
-                ACLMessage updateInvestor = new ACLMessage(ACLMessage.PROPOSE);
-                updateInvestor.addReceiver(new AID("Informer", AID.ISLOCALNAME));
-                updateInvestor.setLanguage(codec.getName());
-                updateInvestor.setOntology(stockMarketOntology.getName());
+                if (changed) {
+                    ACLMessage updateInvestor = new ACLMessage(ACLMessage.PROPOSE);
+                    updateInvestor.addReceiver(new AID("Informer", AID.ISLOCALNAME));
+                    updateInvestor.setLanguage(codec.getName());
+                    updateInvestor.setOntology(stockMarketOntology.getName());
 
-                InvestorInfo investorInfo = new InvestorInfo(agent.getId(), newSkill);
-                getContentManager().fillContent(updateInvestor, investorInfo);
-                agent.send(updateInvestor);
+                    InvestorInfo investorInfo = new InvestorInfo(agent.getId(), newSkill);
+                    getContentManager().fillContent(updateInvestor, investorInfo);
+                    agent.send(updateInvestor);
 
-                // Only accept subscribe messages
-                MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.ACCEPT_PROPOSAL), MessageTemplate.MatchSender(new AID("Informer", AID.ISLOCALNAME)));
-                ACLMessage reply = receive(mt);
-                if (reply != null) {
-                    agent.setSkill(newSkill);
-                    System.out.println(id + " updated ok");
+                    // Only accept proposal messages
+                    MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.ACCEPT_PROPOSAL), MessageTemplate.MatchSender(new AID("Informer", AID.ISLOCALNAME)));
+                    ACLMessage reply = receive(mt);
+                    if (reply != null) {
+                        agent.setSkill(newSkill);
+                        System.out.println(id + " updated ok");
+                    }
                 }
             }
             catch (Exception e) {

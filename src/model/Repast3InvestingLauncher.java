@@ -242,15 +242,32 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
                 float capital = Float.parseFloat(info[1]);
                 String[] skillString = info[2].split(";");
 
-				int nSectors = market.getNSectors();
 				ArrayList<Integer> skill = new ArrayList<>();
                 for (String s: skillString) {
                 	skill.add(Integer.parseInt(s));
 				}
 
-				int dynamic = Integer.parseInt(info[3]);
+				int skillChangePeriod = Integer.parseInt(info[3]);
 
-                custom.add(new InvestorAgent(id, capital, skill, dynamic));
+                if (skillChangePeriod != 0) {
+                    boolean repeat = Boolean.parseBoolean(info[4]);
+                    String[] nextSkillsString = info[5].split("_");
+                    ArrayList<ArrayList<Integer>> nextSkills = new ArrayList<>();
+                    for (String ns: nextSkillsString) {
+                        String[] nextSkillString = ns.split(";");
+
+                        ArrayList<Integer> nextSkill = new ArrayList<>();
+                        for (String s: nextSkillString) {
+                            nextSkill.add(Integer.parseInt(s));
+                        }
+                        nextSkills.add(nextSkill);
+                    }
+
+                    custom.add(new InvestorAgent(id, capital, skill, skillChangePeriod, nextSkills, repeat));
+                }
+                else {
+                    custom.add(new InvestorAgent(id, capital, skill, skillChangePeriod));
+                }
             }
             fileReader.close();
             investors = custom;
