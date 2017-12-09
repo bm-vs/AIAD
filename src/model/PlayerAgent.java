@@ -1,5 +1,6 @@
 package model;
 
+import data.Stock;
 import jade.core.AID;
 import jade.content.lang.Codec;
 import jade.content.lang.sl.SLCodec;
@@ -30,7 +31,7 @@ public class PlayerAgent extends Agent implements Serializable {
     private float capital;
     private float portfolioValue;
     private HashMap<AID, InvestorTrust> investors; // save trust associated with every investor id
-    private InvestorAgent followed; // investor the player agent is following
+    private InvestorTrust followed; // investor the player agent is following
     private AID informer;
 
 
@@ -38,6 +39,7 @@ public class PlayerAgent extends Agent implements Serializable {
       this.id = id;
       this.capital = initialCapital;
       this.investors = new HashMap<>();
+      this.followed = null;
     }
 
     public String getId() {
@@ -56,11 +58,11 @@ public class PlayerAgent extends Agent implements Serializable {
         return capital + portfolioValue;
     }
 
-    public void setFollowed(InvestorAgent investor){
+    public void setFollowed(InvestorTrust investor){
         this.followed = investor;
     }
 
-    public InvestorAgent getFollowed(){
+    public InvestorTrust getFollowed(){
         return  followed;
     }
 
@@ -168,33 +170,87 @@ public class PlayerAgent extends Agent implements Serializable {
         }
 
         public void action() {
-            switch (step) {
-                // Receive current prices from informer agent
-                case 0:
-                    MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.INFORM), MessageTemplate.MatchSender(this.agent.informer));
-                    ACLMessage stockPrices = receive(mt);
-                    if (stockPrices != null) {
-                        try {
-                            MarketPrices marketInfo = (MarketPrices) getContentManager().extractContent(stockPrices);
-                            ArrayList<StockPrice> prices = marketInfo.getPrices();
-                            if (prices != null) {
-                                this.prices = prices;
-                                // TODO update stock trust
-                                step = 1;
+            // Add sequential behaviour
+            SequentialBehaviour seq = new SequentialBehaviour();
+            addBehaviour(seq);
+
+            // Receive current prices from informer agent
+            seq.addSubBehaviour(
+                new SimpleBehaviour() {
+                    boolean received = false;
+
+                    @Override
+                    public void action() {
+                        MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.INFORM), MessageTemplate.MatchSender(agent.informer));
+                        ACLMessage stockPrices = receive(mt);
+                        if (stockPrices != null) {
+                            try {
+                                MarketPrices marketInfo = (MarketPrices) getContentManager().extractContent(stockPrices);
+                                ArrayList<StockPrice> currentPrices = marketInfo.getPrices();
+                                if (prices != null) {
+                                    prices = currentPrices;
+                                    // TODO update stock trust
+                                    received = true;
+                                }
+                            }
+                            catch (Exception e) {
+                                e.printStackTrace();
                             }
                         }
-                        catch (Exception e) {
-                            e.printStackTrace();
+                    }
+
+                    @Override
+                    public boolean done() {
+                        return received;
+                    }
+                }
+            );
+
+            // Receive price predictions from the subscribed investor and buy/sell
+            seq.addSubBehaviour(
+                new SimpleBehaviour() {
+                    boolean received = false;
+
+                    @Override
+                    public void action() {
+                        // Receive prices from followed
+                        if (followed != null) {
+                            MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.INFORM), MessageTemplate.MatchSender(followed.getInvestor()));
+                            ACLMessage stockPredictions = receive(mt);
+                            if (stockPredictions != null) {
+                                try {
+                                    MarketPrices marketInfo = (MarketPrices) getContentManager().extractContent(stockPredictions);
+                                    ArrayList<StockPrice> futurePrices = marketInfo.getPrices();
+                                    if (futurePrices != null) {
+                                        for (StockPrice future : futurePrices) {
+                                            for (StockPrice current : prices) {
+                                                if (future.getSymbol().equals(current.getSymbol())) {
+                                                    current.setFuturePrice(future.getFuturePrice());
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        // TODO buy/sell stock
+                                        received = true;
+                                    }
+                                }
+                                catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                        else {
+                            received = true;
                         }
                     }
-                    break;
-                // Then receive price predictions from the subscribed investor and buy/sell
-                case 1:
-                    // TODO if subscribed receive prices
-                    // TODO buy/sell stock
-                    step = 0;
-                    break;
-            }
+
+                    @Override
+                    public boolean done() {
+                        return received;
+                    }
+                }
+            );
         }
     }
 
@@ -231,9 +287,12 @@ public class PlayerAgent extends Agent implements Serializable {
         }
     }
 
-    private  class ManageFollowing extends TickerBehaviour {
+    private class ManageFollowing extends TickerBehaviour {
         private PlayerAgent agent;
         private ACLMessage requestResults;
+        private ACLMessage unfollow;
+        private ACLMessage follow;
+        private InvestorTrust bestInvestor;
 
         public ManageFollowing(PlayerAgent agent) {
             super(agent, REQUEST_PERIOD);
@@ -274,7 +333,7 @@ public class PlayerAgent extends Agent implements Serializable {
                         @Override
                         public void action() {
                             MessageTemplate mt = MessageTemplate.and(
-                                    MessageTemplate.MatchPerformative(ACLMessage.INFORM),
+                                    MessageTemplate.MatchPerformative(ACLMessage.CONFIRM),
                                     MessageTemplate.MatchInReplyTo(requestResults.getReplyWith()));
 
                             // Update investors trust
@@ -301,127 +360,105 @@ public class PlayerAgent extends Agent implements Serializable {
                 new OneShotBehaviour() {
                     @Override
                     public void action() {
-                        // TODO update trust of all investors
-                        // TODO follow/unfollow
+                        bestInvestor = followed;
+                        float maxTrust = followed == null ? -1 : followed.getTrust();
+
+                        // Determine best investor
+                        for (InvestorTrust investor : investors.values()) {
+                            // TODO check if its worth it to change investor
+                            if (investor.getTrust() > maxTrust && capital >= SUBSCRIBE_TAX) {
+                                bestInvestor = investor;
+                                maxTrust = investor.getTrust();
+                            }
+                        }
+                    }
+                }
+            );
+
+            // Send unfollow
+            seq.addSubBehaviour(
+                new OneShotBehaviour() {
+                    @Override
+                    public void action() {
+                        if (!bestInvestor.equals(followed) && followed != null) {
+                            unfollow = new ACLMessage(ACLMessage.CANCEL);
+                            unfollow.addReceiver(followed.getInvestor());
+                            unfollow.setLanguage(codec.getName());
+                            unfollow.setOntology(stockMarketOntology.getName());
+                            unfollow.setReplyWith(getLocalName() + hashCode() + System.currentTimeMillis());
+                            send(unfollow);
+                        }
+                    }
+                }
+            );
+
+            // Wait for unfollow confirmation
+            seq.addSubBehaviour(
+                new SimpleBehaviour() {
+                    @Override
+                    public void action() {
+                        if (unfollow != null) {
+                            MessageTemplate mt = MessageTemplate.and(
+                                    MessageTemplate.MatchPerformative(ACLMessage.CONFIRM),
+                                    MessageTemplate.MatchInReplyTo(unfollow.getReplyWith()));
+
+                            ACLMessage unfollowSuccess = receive(mt);
+                            if (unfollowSuccess != null) {
+                                System.out.println("Unfollowed " + followed.getInvestor());
+                                followed = null;
+                            }
+                        }
+                    }
+
+                    @Override
+                    public boolean done() {
+                        return followed == null;
+                    }
+                }
+            );
+
+            // Follow best investor
+            seq.addSubBehaviour(
+                new OneShotBehaviour() {
+                    @Override
+                    public void action() {
+                        if (followed == null) {
+                            follow = new ACLMessage(ACLMessage.SUBSCRIBE);
+                            follow.addReceiver(bestInvestor.getInvestor());
+                            follow.setLanguage(codec.getName());
+                            follow.setOntology(stockMarketOntology.getName());
+                            follow.setReplyWith(getLocalName() + hashCode() + System.currentTimeMillis());
+                            send(follow);
+                        }
+                    }
+                }
+            );
+
+            // Wait for follow confirmation
+            seq.addSubBehaviour(
+                new SimpleBehaviour() {
+                    @Override
+                    public void action() {
+                        if (follow != null) {
+                            MessageTemplate mt = MessageTemplate.and(
+                                    MessageTemplate.MatchPerformative(ACLMessage.CONFIRM),
+                                    MessageTemplate.MatchInReplyTo(follow.getReplyWith()));
+
+                            ACLMessage followSuccess = receive(mt);
+                            if (followSuccess != null) {
+                                followed = bestInvestor;
+                                capital -= SUBSCRIBE_TAX;
+                                System.out.println("Followed " + followed.getInvestor());
+                            }
+                        }
+                    }
+
+                    @Override
+                    public boolean done() {
+                        return followed != null;
                     }
                 }
             );
         }
     }
-
-
-
-
-
-            /*
-            // TODO - FALTA IMPLEMENTAR - FAZ A GESTÃO DE QUEM ESTÁ A SEGUIR, FAZNEDO PEDIDOS DE NOVAS INFORMAÇÕES DE RATE, OUD E FOLLOW/UNFOLLOW
-            // TODO - VERIFICAR EM CADA STEP O QUE PODE EVENTUALMENTE FALTAR
-            switch (step) {
-                // Request success rate to all investors
-                case 0:
-                    ACLMessage requestResults = new ACLMessage(ACLMessage.REQUEST);
-                    for (AID investor: this.agent.investorTrust.keySet()) {
-                        requestResults.addReceiver(investor);
-                    }
-                    requestResults.setLanguage(codec.getName());
-                    requestResults.setOntology(stockMarketOntology.getName());
-                    requestResults.setConversationId("rate");
-                    requestResults.setReplyWith("ratereq" + System.currentTimeMillis()); // Unique value
-                    send(requestResults);
-
-                    // Prepare the template to get confirmations
-                    MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchConversationId("rate"),
-                            MessageTemplate.MatchInReplyTo(requestResults.getReplyWith()));
-
-                    step = 1;
-
-                    break;
-                case 1:
-                    step = 0;
-                    break;
-
-                // Receive replys with the rate of each investor
-                case 1:
-                    // Check if investor received the information
-                    MessageTemplate mm = MessageTemplate.and(MessageTemplate.MatchConversationId("rate"),
-                            MessageTemplate.MatchPerformative(ACLMessage.INFORM));
-
-                    while (replies < investorTrust.size()) {
-                        ACLMessage reply = myAgent.receive(mm);
-
-                        // Reply received
-                        if (reply != null) {
-
-                            // TODO - GUARDAR AQUI INFORMAÇÃO DE RATE/TRUST RECEBIDA DE CADA INVESTOR
-
-
-                            replies++;
-                        } else {
-                            block();
-                        }
-                    }
-
-                    // TODO - COM CICLO FOR, DETERMINAR AQUI NESTE STEP, APÓS SE RECEBEREM TODOS OS REPLIES, QUAL O INVESTOR A DAR FOLLOW
-
-                    replies = 0;
-                    step = 2;
-
-                    break;
-
-                // Send follow request to the most trusty investor
-                case 2:
-                    ACLMessage cfp3 = new ACLMessage(ACLMessage.REQUEST);
-
-                    // TODO - FAZER AQUI cfp.addreceiver do investor a quem se vai pedir para dar follow
-
-
-
-                    cfp3.setContent("follow-request");
-                    cfp3.setConversationId("follow");
-
-                    cfp3.setReplyWith("followreq" + System.currentTimeMillis()); // Unique value
-                    myAgent.send(cfp3);
-
-                    // Prepare the template to get confirmations
-                    mt = MessageTemplate.and(MessageTemplate.MatchConversationId("follow-req"),
-                            MessageTemplate.MatchInReplyTo(cfp3.getReplyWith()));
-
-                    step = 3;
-
-                    break;
-
-                // Send unfollow request
-                case 3:
-                    ACLMessage cfp2 = new ACLMessage(ACLMessage.REQUEST);
-
-                    // TODO - DETERMINAR AQUI A QUEM ENVIR UNFOLLOW REQUEST
-
-                    for(int i = 0 ; i < following.size() ; i++) {
-                        boolean found = false;
-
-                        for(int j = 0 ; j < 2 ; j++) {
-                            if(top[j] == null) break;
-
-                            if(investorAgents[top[j].getIndex()].equals( following.get(i) )){
-                                found = true;
-                                break;
-                            }
-                        }
-                        if(!found) {
-                            cfp2.addReceiver(following.get(i));
-                            unfollow(following.get(i));
-                        }
-                    }
-
-                    cfp2.setContent("unfollow-request");
-                    cfp2.setConversationId("unfollow");
-
-                    cfp2.setReplyWith("unfollowreq" + System.currentTimeMillis()); // Unique value
-                    myAgent.send(cfp2);
-                    // Prepare the template to get confirmations
-                    mt = MessageTemplate.and(MessageTemplate.MatchConversationId("unfollow-req"),
-                            MessageTemplate.MatchInReplyTo(cfp2.getReplyWith()));
-
-                    step = 0;
-                */
 }

@@ -43,5 +43,9 @@ public class InvestorTrust {
             float previousCapital = pastCapital.get(pastCapital.size()-2);
             gains.add((capital-previousCapital)/previousCapital);
         }
+        if (gains.size() > 0) {
+            // TODO formula for investor trust
+            trust = gains.get(gains.size()-1);
+        }
     }
 }

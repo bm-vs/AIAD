@@ -15,6 +15,7 @@ import model.onto.MarketPrices;
 import model.onto.StockMarketOntology;
 import sajas.core.Agent;
 import sajas.core.behaviours.CyclicBehaviour;
+import sajas.core.behaviours.SequentialBehaviour;
 import sajas.core.behaviours.SimpleBehaviour;
 import sajas.core.behaviours.TickerBehaviour;
 import sajas.domain.DFService;
@@ -142,11 +143,7 @@ public class InvestorAgent extends Agent implements Serializable {
         // Behaviours
         addBehaviour(new InvestorSubscribe(this));
         addBehaviour(new ManageFollowers());
-
-        // TODO - TIRAR COMENTÁRIO ASSIM QUE ESTEJA IMPLEMENTADO
-        //addBehaviour(new SendInfoFollowers());
         addBehaviour(new InvestorTrade(this));
-
         if (skillChangePeriod != STATIC_AGENT) {
             addBehaviour(new InvestorChangeSkill(this));
         }
@@ -223,7 +220,7 @@ public class InvestorAgent extends Agent implements Serializable {
         }
 
         public void action() {
-            MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.INFORM), MessageTemplate.MatchSender(this.agent.informer));
+            MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.INFORM), MessageTemplate.MatchSender(agent.informer));
 
             // When new prices are received buy/sell/update portfolio value
             ACLMessage stockPrices = receive(mt);
@@ -232,6 +229,7 @@ public class InvestorAgent extends Agent implements Serializable {
                     MarketPrices marketInfo = (MarketPrices) getContentManager().extractContent(stockPrices);
                     ArrayList<StockPrice> prices = marketInfo.getPrices();
                     if (prices != null) {
+                        sendPredictions(marketInfo);
                         moveStock(prices);
                         updatePortfolioValue(prices);
                     }
@@ -239,6 +237,23 @@ public class InvestorAgent extends Agent implements Serializable {
                 catch (Exception e) {
                     e.printStackTrace();
                 }
+            }
+        }
+
+        // Sends price predictions to followers
+        private void sendPredictions(MarketPrices marketInfo) {
+            try {
+                ACLMessage predictions = new ACLMessage(ACLMessage.INFORM);
+                for (AID follower: followers) {
+                    predictions.addReceiver(follower);
+                }
+                predictions.setLanguage(codec.getName());
+                predictions.setOntology(stockMarketOntology.getName());
+                getContentManager().fillContent(predictions, marketInfo);
+                send(predictions);
+            }
+            catch (Exception e) {
+                e.printStackTrace();
             }
         }
 
@@ -394,45 +409,44 @@ public class InvestorAgent extends Agent implements Serializable {
             MessageTemplate mt = MessageTemplate.or(MessageTemplate.or(MessageTemplate.MatchPerformative(ACLMessage.REQUEST), MessageTemplate.MatchPerformative(ACLMessage.SUBSCRIBE)), MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
             ACLMessage msg = receive(mt);
 
+
             if (msg != null) {
+                ACLMessage reply = msg.createReply();
+
                 switch (msg.getPerformative()) {
                     // Respond with current total capital
                     case ACLMessage.REQUEST:
-                        ACLMessage reply = msg.createReply();
-                        reply.setPerformative(ACLMessage.INFORM);
+                        reply.setPerformative(ACLMessage.CONFIRM);
                         reply.setContent((new Float(getTotalCapital())).toString());
                         send(reply);
                         break;
-                    // TODO respond with ACLMessage.CONFIRM
                     // Add player to followers
                     case ACLMessage.SUBSCRIBE:
                         addFollower(msg.getSender());
+                        reply.setPerformative(ACLMessage.CONFIRM);
+                        send(reply);
                         break;
                     // Remove player to followers
                     case ACLMessage.CANCEL:
                         removeFollower(msg.getSender());
+                        reply.setPerformative(ACLMessage.CONFIRM);
+                        send(reply);
                         break;
                 }
             }
         }
 
         private void addFollower(AID follower){
-            if(!followers.contains(follower))
+            if (!followers.contains(follower)) {
                 followers.add(follower);
+                capital += SUBSCRIBE_TAX;
+            }
         }
 
         private void removeFollower(AID follower){
-            if(followers.contains(follower))
+            if (followers.contains(follower)) {
                 followers.remove(follower);
+            }
         }
     }
-
-    // TODO - IMPLEMENTAR - Behaviour para periodicment eenviar informação para os followers deste investor
-    private class SendInfoFollowers extends CyclicBehaviour {
-
-        public void action(){
-
-        }
-    }
-
 }
