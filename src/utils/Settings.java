@@ -13,6 +13,10 @@ public class Settings {
     // Informer agent
     public static final int BROADCAST_PERIOD = 20;
 
+    // Player agent
+    public static final int REQUEST_PERIOD = 1000;
+    public static final String PLAYER_SUBSCRIBE_MSG = "PlayerSubscribe";
+
     // Market times
     public static final int OPEN_TIME = 9;
     public static final int CLOSE_TIME = 16;

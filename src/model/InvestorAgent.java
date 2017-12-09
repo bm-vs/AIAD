@@ -388,30 +388,31 @@ public class InvestorAgent extends Agent implements Serializable {
         }
     }
 
-    // TODO - IMPLEMENTAR  - faz gestão de follow e unfollow de seguidores
     private class ManageFollowers extends CyclicBehaviour {
         public void action() {
-            MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);
-            ACLMessage msg = myAgent.receive(mt);
+            // Receive request, subscribe and cancel messages
+            MessageTemplate mt = MessageTemplate.or(MessageTemplate.or(MessageTemplate.MatchPerformative(ACLMessage.REQUEST), MessageTemplate.MatchPerformative(ACLMessage.SUBSCRIBE)), MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
+            ACLMessage msg = receive(mt);
 
-            // Player agent asks info about the investor agent
-            if (msg != null && msg.getConversationId().equals("rate")) {
-                ACLMessage reply = msg.createReply();
-                reply.setPerformative(ACLMessage.INFORM);
-
-                // TODO - CORRIGIR - colocar aqui a infrmação que o investor deve enviar o player para ser avaliado
-                reply.setContent("colocar aqui informação relevante do investor");
-                myAgent.send(reply);
-            }
-
-            // Player agent asks to be added to followers
-            else if (msg != null && msg.getConversationId().equals("follow")) {
-                addFollower(msg.getSender());
-            }
-
-            // Player agent asks to be removed from followers
-            else if (msg != null && msg.getConversationId().equals("unfollow")) {
-                removeFollower(msg.getSender());
+            if (msg != null) {
+                switch (msg.getPerformative()) {
+                    // Respond with current total capital
+                    case ACLMessage.REQUEST:
+                        ACLMessage reply = msg.createReply();
+                        reply.setPerformative(ACLMessage.INFORM);
+                        reply.setContent((new Float(getTotalCapital())).toString());
+                        send(reply);
+                        break;
+                    // TODO respond with ACLMessage.CONFIRM
+                    // Add player to followers
+                    case ACLMessage.SUBSCRIBE:
+                        addFollower(msg.getSender());
+                        break;
+                    // Remove player to followers
+                    case ACLMessage.CANCEL:
+                        removeFollower(msg.getSender());
+                        break;
+                }
             }
         }
 
@@ -424,7 +425,6 @@ public class InvestorAgent extends Agent implements Serializable {
             if(followers.contains(follower))
                 followers.remove(follower);
         }
-
     }
 
     // TODO - IMPLEMENTAR - Behaviour para periodicment eenviar informação para os followers deste investor

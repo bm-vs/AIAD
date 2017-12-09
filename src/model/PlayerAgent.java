@@ -15,17 +15,13 @@ import model.onto.StockMarketOntology;
 
 import model.onto.StockPrice;
 import sajas.core.Agent;
-import sajas.core.behaviours.CyclicBehaviour;
-import sajas.core.behaviours.SimpleBehaviour;
-import sajas.core.behaviours.TickerBehaviour;
+import sajas.core.behaviours.*;
 import sajas.domain.DFService;
 
 import java.io.Serializable;
 import java.util.*;
 
-import static utils.Settings.BROADCAST_PERIOD;
-import static utils.Settings.PORTFOLIO_SIZE;
-import static utils.Settings.TRANSACTION_TAX;
+import static utils.Settings.*;
 
 public class PlayerAgent extends Agent implements Serializable {
     private Codec codec;
@@ -33,15 +29,15 @@ public class PlayerAgent extends Agent implements Serializable {
     private String id;
     private float capital;
     private float portfolioValue;
-    private HashMap<AID, InvestorTrust> investorTrust; // save trust associated with every investor id
-    private InvestorAgent investor; // investor the player agent has its money on
+    private HashMap<AID, InvestorTrust> investors; // save trust associated with every investor id
+    private InvestorAgent followed; // investor the player agent is following
     private AID informer;
 
 
     public PlayerAgent(String id, float initialCapital) {
       this.id = id;
       this.capital = initialCapital;
-      this.investorTrust = new HashMap<>();
+      this.investors = new HashMap<>();
     }
 
     public String getId() {
@@ -60,12 +56,12 @@ public class PlayerAgent extends Agent implements Serializable {
         return capital + portfolioValue;
     }
 
-    public void setInvestorAgent(InvestorAgent investor){
-        this.investor = investor;
+    public void setFollowed(InvestorAgent investor){
+        this.followed = investor;
     }
 
-    public InvestorAgent getInvestorAgent(){
-        return  investor;
+    public InvestorAgent getFollowed(){
+        return  followed;
     }
 
     @Override
@@ -94,8 +90,7 @@ public class PlayerAgent extends Agent implements Serializable {
         addBehaviour(new PlayerSubscribe(this));
         addBehaviour(new PlayerTrade(this));
         addBehaviour(new SearchInvestorAgents(this));
-
-       // addBehaviour(new ManageFollowing(this));
+        addBehaviour(new ManageFollowing(this));
     }
 
     @Override
@@ -135,10 +130,11 @@ public class PlayerAgent extends Agent implements Serializable {
 
             // Subscribe to informer agent to receive prices
             try {
-                ACLMessage subscribe = new ACLMessage(ACLMessage.REQUEST);
+                ACLMessage subscribe = new ACLMessage(ACLMessage.SUBSCRIBE);
                 subscribe.addReceiver(this.agent.informer);
                 subscribe.setLanguage(codec.getName());
                 subscribe.setOntology(stockMarketOntology.getName());
+                subscribe.setContent(PLAYER_SUBSCRIBE_MSG);
                 agent.send(subscribe);
 
                 // Only accept subscribe messages
@@ -173,10 +169,9 @@ public class PlayerAgent extends Agent implements Serializable {
 
         public void action() {
             switch (step) {
+                // Receive current prices from informer agent
                 case 0:
                     MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.INFORM), MessageTemplate.MatchSender(this.agent.informer));
-
-                    // When new prices are received buy/sell/update portfolio value
                     ACLMessage stockPrices = receive(mt);
                     if (stockPrices != null) {
                         try {
@@ -193,6 +188,7 @@ public class PlayerAgent extends Agent implements Serializable {
                         }
                     }
                     break;
+                // Then receive price predictions from the subscribed investor and buy/sell
                 case 1:
                     // TODO if subscribed receive prices
                     // TODO buy/sell stock
@@ -220,7 +216,7 @@ public class PlayerAgent extends Agent implements Serializable {
             try {
                 DFAgentDescription[] result = DFService.search(this.agent, template);
                 for (int i = 0; i < result.length; i++) {
-                    this.agent.investorTrust.put(result[i].getName(), new InvestorTrust());
+                    this.agent.investors.put(result[i].getName(), new InvestorTrust(result[i].getName()));
                 }
                 foundInvestors = true;
             }
@@ -235,41 +231,113 @@ public class PlayerAgent extends Agent implements Serializable {
         }
     }
 
-    // TODO - FALTA IMPLEMENTAR - FAZ A GESTÃO DE QUEM ESTÁ A SEGUIR, FAZNEDO PEDIDOS DE NOVAS INFORMAÇÕES DE RATE, OUD E FOLLOW/UNFOLLOW
-    // TODO - VERIFICAR EM CADA STEP O QUE PODE EVENTUALMENTE FALTAR
     private  class ManageFollowing extends TickerBehaviour {
         private PlayerAgent agent;
-        private int step = 0;
-        private int replies = 0;
+        private ACLMessage requestResults;
 
-        public ManageFollowing(PlayerAgent agent){
-            super(agent, BROADCAST_PERIOD);
+        public ManageFollowing(PlayerAgent agent) {
+            super(agent, REQUEST_PERIOD);
             this.agent = agent;
         }
 
-        public void onTick(){
+        public void onTick() {
+            // Add sequential behaviour
+            SequentialBehaviour seq = new SequentialBehaviour();
+            addBehaviour(seq);
+
+            // Request success rate to all investors
+            seq.addSubBehaviour(
+                new OneShotBehaviour() {
+                    @Override
+                    public void action() {
+                        requestResults = new ACLMessage(ACLMessage.REQUEST);
+                        for (AID investor: agent.investors.keySet()) {
+                            requestResults.addReceiver(investor);
+                        }
+                        requestResults.setLanguage(codec.getName());
+                        requestResults.setOntology(stockMarketOntology.getName());
+                        requestResults.setReplyWith(getLocalName() + hashCode() + System.currentTimeMillis());
+                        send(requestResults);
+                    }
+                }
+            );
+
+            // Add parallel behaviour to receive info from every investor
+            ParallelBehaviour par = new ParallelBehaviour(ParallelBehaviour.WHEN_ALL);
+            seq.addSubBehaviour(par);
+
+            for (AID investor: this.agent.investors.keySet()) {
+                par.addSubBehaviour(
+                    new SimpleBehaviour() {
+                        boolean done = false;
+
+                        @Override
+                        public void action() {
+                            MessageTemplate mt = MessageTemplate.and(
+                                    MessageTemplate.MatchPerformative(ACLMessage.INFORM),
+                                    MessageTemplate.MatchInReplyTo(requestResults.getReplyWith()));
+
+                            // Update investors trust
+                            ACLMessage investorCapital = receive(mt);
+                            if (investorCapital != null) {
+                                InvestorTrust trust = investors.get(investor);
+                                trust.addPastCapital(Float.parseFloat(investorCapital.getContent()));
+                                investors.put(investor, trust);
+                                done = true;
+                            }
+                        }
+
+                        @Override
+                        public boolean done() {
+                            return done;
+                        }
+                    }
+                );
+
+            }
+
+            // Determine follow/unfollow of investor
+            seq.addSubBehaviour(
+                new OneShotBehaviour() {
+                    @Override
+                    public void action() {
+                        // TODO update trust of all investors
+                        // TODO follow/unfollow
+                    }
+                }
+            );
+        }
+    }
+
+
+
+
+
+            /*
+            // TODO - FALTA IMPLEMENTAR - FAZ A GESTÃO DE QUEM ESTÁ A SEGUIR, FAZNEDO PEDIDOS DE NOVAS INFORMAÇÕES DE RATE, OUD E FOLLOW/UNFOLLOW
+            // TODO - VERIFICAR EM CADA STEP O QUE PODE EVENTUALMENTE FALTAR
             switch (step) {
                 // Request success rate to all investors
                 case 0:
-                    ACLMessage cfp = new ACLMessage(ACLMessage.REQUEST);
-
-                    for (AID investor : this.agent.investorTrust.keySet()) {
-                        cfp.addReceiver(investor);
+                    ACLMessage requestResults = new ACLMessage(ACLMessage.REQUEST);
+                    for (AID investor: this.agent.investorTrust.keySet()) {
+                        requestResults.addReceiver(investor);
                     }
-
-                    // TODO - USAR AQUI ONTOLOGIAS??
-                    cfp.setContent("rate-request");
-                    cfp.setConversationId("rate");
-
-                    cfp.setReplyWith("ratereq" + System.currentTimeMillis()); // Unique value
-                    myAgent.send(cfp);
+                    requestResults.setLanguage(codec.getName());
+                    requestResults.setOntology(stockMarketOntology.getName());
+                    requestResults.setConversationId("rate");
+                    requestResults.setReplyWith("ratereq" + System.currentTimeMillis()); // Unique value
+                    send(requestResults);
 
                     // Prepare the template to get confirmations
                     MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchConversationId("rate"),
-                            MessageTemplate.MatchInReplyTo(cfp.getReplyWith()));
+                            MessageTemplate.MatchInReplyTo(requestResults.getReplyWith()));
 
                     step = 1;
 
+                    break;
+                case 1:
+                    step = 0;
                     break;
 
                 // Receive replys with the rate of each investor
@@ -328,7 +396,7 @@ public class PlayerAgent extends Agent implements Serializable {
 
                     // TODO - DETERMINAR AQUI A QUEM ENVIR UNFOLLOW REQUEST
 
-                    /*for(int i = 0 ; i < following.size() ; i++) {
+                    for(int i = 0 ; i < following.size() ; i++) {
                         boolean found = false;
 
                         for(int j = 0 ; j < 2 ; j++) {
@@ -343,7 +411,7 @@ public class PlayerAgent extends Agent implements Serializable {
                             cfp2.addReceiver(following.get(i));
                             unfollow(following.get(i));
                         }
-                    }*/
+                    }
 
                     cfp2.setContent("unfollow-request");
                     cfp2.setConversationId("unfollow");
@@ -355,9 +423,5 @@ public class PlayerAgent extends Agent implements Serializable {
                             MessageTemplate.MatchInReplyTo(cfp2.getReplyWith()));
 
                     step = 0;
-            }
-        }
-    }
-
-
+                */
 }

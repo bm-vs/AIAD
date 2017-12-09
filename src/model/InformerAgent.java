@@ -1,12 +1,9 @@
 package model;
 
 import data.Market;
-import jade.content.Concept;
-import jade.content.ContentElement;
 import jade.content.lang.Codec;
 import jade.content.lang.sl.SLCodec;
 import jade.content.onto.Ontology;
-import jade.content.onto.basic.Action;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.domain.FIPAException;
@@ -21,7 +18,6 @@ import sajas.core.Agent;
 import sajas.core.behaviours.CyclicBehaviour;
 import sajas.core.behaviours.TickerBehaviour;
 import sajas.domain.DFService;
-import sun.plugin2.message.Message;
 import utils.DateNotFoundException;
 import model.onto.StockPrice;
 
@@ -97,42 +93,32 @@ public class InformerAgent extends Agent {
             // Only accept subscribe messages
             MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.SUBSCRIBE);
 
-            // Handle subscription of investors
+            // Handle subscriptions
             ACLMessage subscriptions = receive(mt);
             if (subscriptions != null) {
                 try {
-                    // Save info about every investor
-                    InvestorInfo investor = (InvestorInfo) getContentManager().extractContent(subscriptions);
-                    if (!investors.containsKey(subscriptions.getSender())) {
-                        investors.put(subscriptions.getSender(), investor);
-                        System.out.println("Investor " + investor + " subscribed");
+                    if (subscriptions.getContent().equals(PLAYER_SUBSCRIBE_MSG)) {
+                        // Save sender of player subscriptions
+                        if (!players.contains(subscriptions.getSender())) {
+                            players.add(subscriptions.getSender());
+                            System.out.println("Player " + subscriptions.getSender() + " subscribed");
 
-                        ACLMessage reply = subscriptions.createReply();
-                        reply.setPerformative(ACLMessage.AGREE);
-                        send(reply);
+                            ACLMessage reply = subscriptions.createReply();
+                            reply.setPerformative(ACLMessage.AGREE);
+                            send(reply);
+                        }
                     }
-                }
-                catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
+                    else {
+                        // Save info about every investor
+                        InvestorInfo investor = (InvestorInfo) getContentManager().extractContent(subscriptions);
+                        if (!investors.containsKey(subscriptions.getSender())) {
+                            investors.put(subscriptions.getSender(), investor);
+                            System.out.println("Investor " + investor + " subscribed");
 
-
-            // Only accept request messages
-            mt = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);
-
-            // Handle subscription of players
-            subscriptions = receive(mt);
-            if (subscriptions != null) {
-                try {
-                    // Player subscription
-                    if (!players.contains(subscriptions.getSender())) {
-                        players.add(subscriptions.getSender());
-                        System.out.println("Player " + subscriptions.getSender() + " subscribed");
-
-                        ACLMessage reply = subscriptions.createReply();
-                        reply.setPerformative(ACLMessage.AGREE);
-                        send(reply);
+                            ACLMessage reply = subscriptions.createReply();
+                            reply.setPerformative(ACLMessage.AGREE);
+                            send(reply);
+                        }
                     }
                 }
                 catch (Exception e) {
@@ -252,5 +238,4 @@ public class InformerAgent extends Agent {
             }
         }
     }
-
 }
