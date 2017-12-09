@@ -35,9 +35,9 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 	private ArrayList<PlayerAgent> players;
 
 	// Simulation paramaters
-	private int nInvestors = 1;
+	private int nInvestors = 3;
 	private float initialInvestorCapital = 10000;
-	private int nPlayers = 1;
+	private int nPlayers = 3;
 	private float initialPlayerCapital = 1000;
     private int dynamicInvestors = 0;
 	private boolean detailedInfo = false;
@@ -127,13 +127,13 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 			// Create investors
             boolean custom = readCustomFile();
             if (custom) {
-                System.out.println("Custom Investors");
+                System.out.println("Custom Investors (n = " + investors.size() + ")");
                 for (InvestorAgent agent: investors) {
                     agentContainer.acceptNewAgent(agent.getId(), agent).start();
                 }
             }
 			if (!custom) {
-                System.out.println("Random Investors");
+                System.out.println("Random Investors (n = " + nInvestors + ")");
 				Random r = new Random();
 				for (int i = 0; i < nInvestors; i++) {
 					String id = "Investor" + i;
@@ -149,7 +149,7 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 			}
 
 			// Create players
-            System.out.println("Random Players");
+            System.out.println("Random Players (n = " + nPlayers + ")");
 			for (int i = 0; i < nPlayers; i++) {
 				String id = "Player" + i;
 				PlayerAgent agent = new PlayerAgent(id, initialPlayerCapital);

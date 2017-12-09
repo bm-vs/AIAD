@@ -14,17 +14,15 @@ public class StockPrice implements Concept {
     private String symbol;
     private int sector;
     private float currPrice;  // price at the current time
-    private float hourPrice;  // price next hour
-    private float estimatedPrice; // price prediction to be used by investorAgents
+    private float futurePrice;  // price at next hour
 
     public StockPrice() {}
 
-    public StockPrice(String symbol, int sector, float currPrice, float hourPrice) {
+    public StockPrice(String symbol, int sector, float currPrice, float futurePrice) {
         this.symbol = symbol;
         this.sector = sector;
         this.currPrice = currPrice;
-        this.hourPrice = hourPrice;
-        this.estimatedPrice = 0;
+        this.futurePrice = futurePrice;
     }
 
     public String getSymbol() {
@@ -51,24 +49,16 @@ public class StockPrice implements Concept {
         this.currPrice = currPrice;
     }
 
-    public float getHourPrice() {
-        return hourPrice;
+    public float getFuturePrice() {
+        return futurePrice;
     }
 
-    public void setHourPrice(float hourPrice) {
-        this.hourPrice = hourPrice;
-    }
-
-    public float getEstimatedPrice() {
-        return estimatedPrice;
-    }
-
-    public void setEstimatedPrice(float estimatedPrice) {
-        this.estimatedPrice = estimatedPrice;
+    public void setFuturePrice(float hourPrice) {
+        this.futurePrice = hourPrice;
     }
 
     public float getGrowth() {
-        return (estimatedPrice-currPrice)/currPrice;
+        return (futurePrice-currPrice)/currPrice;
     }
 
     // Introduces error into hour price according to skill
@@ -78,13 +68,13 @@ public class StockPrice implements Concept {
         if (skill < r.nextInt(INVESTOR_MAX_SKILL)) {
             // Error is x% of price with x being lower the higher the skill of the investor
             float error = (INVESTOR_MAX_SKILL - skill - 1) * (float) r.nextGaussian() / 100f;
-            hourPrice = hourPrice+hourPrice*error;
+            futurePrice = futurePrice+futurePrice*error;
         }
     }
 
     @Override
     public String toString() {
-        Float growth = (estimatedPrice-currPrice)/currPrice;
+        Float growth = (futurePrice-currPrice)/currPrice;
         return growth.toString();
     }
 

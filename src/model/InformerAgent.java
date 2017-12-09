@@ -16,11 +16,12 @@ import jade.lang.acl.MessageTemplate;
 import model.onto.InvestorInfo;
 import model.onto.MarketPrices;
 import model.onto.StockMarketOntology;
-import sajas.core.AID;
+import jade.core.AID;
 import sajas.core.Agent;
 import sajas.core.behaviours.CyclicBehaviour;
 import sajas.core.behaviours.TickerBehaviour;
 import sajas.domain.DFService;
+import sun.plugin2.message.Message;
 import utils.DateNotFoundException;
 import model.onto.StockPrice;
 
@@ -36,12 +37,14 @@ public class InformerAgent extends Agent {
     private Ontology stockMarketOntology;
     private Market market;
     private Calendar currentTime;
-    private ArrayList<InvestorInfo> investors;
+    private HashMap<AID, InvestorInfo> investors;
+    private ArrayList<AID> players;
 
     public InformerAgent(Market market) {
         this.market = market;
         this.currentTime = market.getStartDate();
-        this.investors = new ArrayList<>();
+        this.investors = new HashMap<>();
+        this.players = new ArrayList<>();
     }
 
     @Override
@@ -83,8 +86,11 @@ public class InformerAgent extends Agent {
 
     // Behaviours
     private class InformerSubscribe extends CyclicBehaviour {
-        public InformerSubscribe(InformerAgent a) {
-            super(a);
+        private Agent agent;
+
+        public InformerSubscribe(InformerAgent agent) {
+            super(agent);
+            this.agent = agent;
         }
 
         public void action() {
@@ -97,15 +103,39 @@ public class InformerAgent extends Agent {
                 try {
                     // Save info about every investor
                     InvestorInfo investor = (InvestorInfo) getContentManager().extractContent(subscriptions);
-                    if (!investors.contains(investor)) {
-                        investors.add(investor);
-                        System.out.println(investor + " subscribed");
+                    if (!investors.containsKey(subscriptions.getSender())) {
+                        investors.put(subscriptions.getSender(), investor);
+                        System.out.println("Investor " + investor + " subscribed");
 
                         ACLMessage reply = subscriptions.createReply();
                         reply.setPerformative(ACLMessage.AGREE);
                         send(reply);
                     }
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
+
+            // Only accept request messages
+            mt = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);
+
+            // Handle subscription of players
+            subscriptions = receive(mt);
+            if (subscriptions != null) {
+                try {
+                    // Player subscription
+                    if (!players.contains(subscriptions.getSender())) {
+                        players.add(subscriptions.getSender());
+                        System.out.println("Player " + subscriptions.getSender() + " subscribed");
+
+                        ACLMessage reply = subscriptions.createReply();
+                        reply.setPerformative(ACLMessage.AGREE);
+                        send(reply);
+                    }
+                }
+                catch (Exception e) {
                     e.printStackTrace();
                 }
             }
@@ -118,30 +148,51 @@ public class InformerAgent extends Agent {
         }
 
         public void onTick() {
-            // Sends stock prices to every investor
+            // Sends stock prices to every investor and player
             boolean dayNotFound = false;
             try {
                 ArrayList<StockPrice> prices = market.getPrices(currentTime);
 
-                for (InvestorInfo investor : investors) {
+                // Send to investors
+                for (AID investorAID : investors.keySet()) {
+                    InvestorInfo investor = investors.get(investorAID);
+
                     // Create different predictions to every investor according to their skill level in that sector
                     ArrayList<StockPrice> investorPrices = new ArrayList<>();
                     for (StockPrice price: prices) {
                         int skill = investor.getSkill().get(price.getSector());
-                        StockPrice investorPrice = new StockPrice(price.getSymbol(), price.getSector(), price.getCurrPrice(), price.getHourPrice());
+                        StockPrice investorPrice = new StockPrice(price.getSymbol(), price.getSector(), price.getCurrPrice(), price.getFuturePrice());
                         investorPrice.addError(skill);
                         investorPrices.add(investorPrice);
                     }
 
                     // Send prices
                     ACLMessage stockPrices = new ACLMessage(ACLMessage.INFORM);
-                    stockPrices.addReceiver(new AID(investor.getId(), AID.ISLOCALNAME));
+                    stockPrices.addReceiver(investorAID);
                     stockPrices.setLanguage(codec.getName());
                     stockPrices.setOntology(stockMarketOntology.getName());
                     getContentManager().fillContent(stockPrices, new MarketPrices(investorPrices));
 
                     send(stockPrices);
                 }
+
+                // Remove future prices (for player agents)
+                ArrayList<StockPrice> playerPrices = new ArrayList<>();
+                for (StockPrice price: prices) {
+                    StockPrice playerPrice = new StockPrice(price.getSymbol(), price.getSector(), price.getCurrPrice(), price.getCurrPrice());
+                    playerPrices.add(playerPrice);
+                }
+
+                // Send to players
+                ACLMessage stockPrices = new ACLMessage(ACLMessage.INFORM);
+                for (AID playerAID: players) {
+                    stockPrices.addReceiver(playerAID);
+                }
+                stockPrices.setLanguage(codec.getName());
+                stockPrices.setOntology(stockMarketOntology.getName());
+                getContentManager().fillContent(stockPrices, new MarketPrices(prices));
+                send(stockPrices);
+
             }
             catch (Exception e) {
                 if (e instanceof DateNotFoundException) {
@@ -185,17 +236,16 @@ public class InformerAgent extends Agent {
             if (updates != null) {
                 try {
                     // Update info about matched investor
-                    InvestorInfo investor = (InvestorInfo) getContentManager().extractContent(updates);
-                    for (InvestorInfo inv: investors) {
-                        if (inv.getId().equals(investor.getId())) {
-                            inv.setSkill(investor.getSkill());
-                            System.out.println(inv + " updated");
+                    ArrayList<Integer> skill = ((InvestorInfo) getContentManager().extractContent(updates)).getSkill();
+                    InvestorInfo investorInfo = investors.get(updates.getSender());
+                    investorInfo.setSkill(skill);
+                    investors.put(updates.getSender(), investorInfo);
 
-                            ACLMessage reply = updates.createReply();
-                            reply.setPerformative(ACLMessage.ACCEPT_PROPOSAL);
-                            send(reply);
-                        }
-                    }
+                    System.out.println(investorInfo + " updated");
+
+                    ACLMessage reply = updates.createReply();
+                    reply.setPerformative(ACLMessage.ACCEPT_PROPOSAL);
+                    send(reply);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }

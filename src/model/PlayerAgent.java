@@ -10,8 +10,10 @@ import jade.domain.FIPAException;
 import jade.domain.FIPANames;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
+import model.onto.MarketPrices;
 import model.onto.StockMarketOntology;
 
+import model.onto.StockPrice;
 import sajas.core.Agent;
 import sajas.core.behaviours.CyclicBehaviour;
 import sajas.core.behaviours.SimpleBehaviour;
@@ -22,8 +24,10 @@ import java.io.Serializable;
 import java.util.*;
 
 import static utils.Settings.BROADCAST_PERIOD;
+import static utils.Settings.PORTFOLIO_SIZE;
+import static utils.Settings.TRANSACTION_TAX;
 
-public class PlayerAgent extends Agent implements  Serializable{
+public class PlayerAgent extends Agent implements Serializable {
     private Codec codec;
     private Ontology stockMarketOntology;
     private String id;
@@ -31,6 +35,7 @@ public class PlayerAgent extends Agent implements  Serializable{
     private float portfolioValue;
     private HashMap<AID, InvestorTrust> investorTrust; // save trust associated with every investor id
     private InvestorAgent investor; // investor the player agent has its money on
+    private AID informer;
 
 
     public PlayerAgent(String id, float initialCapital) {
@@ -65,10 +70,8 @@ public class PlayerAgent extends Agent implements  Serializable{
 
     @Override
     public void setup(){
-        System.out.println("Player created");
-
         // register language and ontology
-        codec = new SLCodec();
+        codec = new SLCodec(true);
         stockMarketOntology = StockMarketOntology.getInstance();
         getContentManager().registerLanguage(codec);
         getContentManager().registerOntology(stockMarketOntology);
@@ -88,8 +91,11 @@ public class PlayerAgent extends Agent implements  Serializable{
             System.err.println(e.getMessage());
         }
 
+        addBehaviour(new PlayerSubscribe(this));
+        addBehaviour(new PlayerTrade(this));
         addBehaviour(new SearchInvestorAgents(this));
-        addBehaviour(new ManageFollowing(this));
+
+       // addBehaviour(new ManageFollowing(this));
     }
 
     @Override
@@ -103,6 +109,99 @@ public class PlayerAgent extends Agent implements  Serializable{
 
 
     // Behaviours
+    private class PlayerSubscribe extends SimpleBehaviour {
+        private boolean subscribed = false;
+        private PlayerAgent agent;
+
+        public PlayerSubscribe(PlayerAgent agent) {
+            super(agent);
+            this.agent = agent;
+        }
+
+        public void action() {
+            // Find informer agent
+            DFAgentDescription template = new DFAgentDescription();
+            ServiceDescription sd2 = new ServiceDescription();
+            sd2.setType("informer");
+            template.addServices(sd2);
+
+            try {
+                DFAgentDescription[] result = DFService.search(this.agent, template);
+                this.agent.informer = result[0].getName();
+            }
+            catch (FIPAException fe) {
+                fe.printStackTrace();
+            }
+
+            // Subscribe to informer agent to receive prices
+            try {
+                ACLMessage subscribe = new ACLMessage(ACLMessage.REQUEST);
+                subscribe.addReceiver(this.agent.informer);
+                subscribe.setLanguage(codec.getName());
+                subscribe.setOntology(stockMarketOntology.getName());
+                agent.send(subscribe);
+
+                // Only accept subscribe messages
+                MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.AGREE), MessageTemplate.MatchSender(this.agent.informer));
+                ACLMessage reply = receive(mt);
+                if (reply != null) {
+                    subscribed = true;
+                }
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public boolean done() {
+            return subscribed;
+        }
+    }
+
+    private class PlayerTrade extends CyclicBehaviour {
+        PlayerAgent agent;
+        ArrayList<StockPrice> prices;
+        private int step;
+
+        public PlayerTrade(PlayerAgent agent) {
+            super(agent);
+            this.agent = agent;
+            prices = new ArrayList<>();
+            step = 0;
+        }
+
+        public void action() {
+            switch (step) {
+                case 0:
+                    MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.INFORM), MessageTemplate.MatchSender(this.agent.informer));
+
+                    // When new prices are received buy/sell/update portfolio value
+                    ACLMessage stockPrices = receive(mt);
+                    if (stockPrices != null) {
+                        try {
+                            MarketPrices marketInfo = (MarketPrices) getContentManager().extractContent(stockPrices);
+                            ArrayList<StockPrice> prices = marketInfo.getPrices();
+                            if (prices != null) {
+                                this.prices = prices;
+                                // TODO update stock trust
+                                step = 1;
+                            }
+                        }
+                        catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    break;
+                case 1:
+                    // TODO if subscribed receive prices
+                    // TODO buy/sell stock
+                    step = 0;
+                    break;
+            }
+        }
+    }
+
     private class SearchInvestorAgents extends SimpleBehaviour {
         private boolean foundInvestors = false;
         private PlayerAgent agent;
@@ -120,20 +219,12 @@ public class PlayerAgent extends Agent implements  Serializable{
 
             try {
                 DFAgentDescription[] result = DFService.search(this.agent, template);
-
                 for (int i = 0; i < result.length; i++) {
                     this.agent.investorTrust.put(result[i].getName(), new InvestorTrust());
-
-                    // TODO - IMPLEMENTAR - COLOCAR LOGO AQUI VALORRES INICIAIS DE RATE/CONFIANÇA?
-                    //investorAgents[i] = result[i].getName();
-                    //investorAgentsRatio[i] = 0;
-                    //System.out.println(investorAgents[i].getName() + "  -  " + result.length);
                 }
-
                 foundInvestors = true;
-
-                System.out.println("Found "+this.agent.investorTrust.size()+"investor agents.");
-            } catch (FIPAException fe) {
+            }
+            catch (FIPAException fe) {
                 fe.printStackTrace();
             }
         }

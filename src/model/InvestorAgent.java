@@ -172,6 +172,7 @@ public class InvestorAgent extends Agent implements Serializable {
         }
 
         public void action() {
+            // Find informer agent
             DFAgentDescription template = new DFAgentDescription();
             ServiceDescription sd2 = new ServiceDescription();
             sd2.setType("informer");
@@ -180,7 +181,8 @@ public class InvestorAgent extends Agent implements Serializable {
             try {
                 DFAgentDescription[] result = DFService.search(this.agent, template);
                 this.agent.informer = result[0].getName();
-            } catch (FIPAException fe) {
+            }
+            catch (FIPAException fe) {
                 fe.printStackTrace();
             }
 
@@ -195,12 +197,10 @@ public class InvestorAgent extends Agent implements Serializable {
                 agent.send(subscribe);
 
                 // Only accept subscribe messages
-                MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.AGREE),
-                        MessageTemplate.MatchSender(this.agent.informer));
+                MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.AGREE), MessageTemplate.MatchSender(this.agent.informer));
                 ACLMessage reply = receive(mt);
                 if (reply != null) {
                     subscribed = true;
-                    System.out.println(id + " subscribed ok");
                 }
             }
             catch (Exception e) {
@@ -245,12 +245,7 @@ public class InvestorAgent extends Agent implements Serializable {
         // Buys/sells stock according to current prices and predicted prices
         private void moveStock(ArrayList<StockPrice> prices) {
             // Get top growth stock
-            ArrayList<StockPrice> predictedGrowth = new ArrayList<>();
-            for (StockPrice price: prices) {
-                float estimated = price.getHourPrice();
-                price.setEstimatedPrice(estimated);
-                predictedGrowth.add(price);
-            }
+            ArrayList<StockPrice> predictedGrowth = new ArrayList<>(prices);
             Collections.sort(predictedGrowth, new StockPrice.StockPriceComparator());
             Collections.reverse(predictedGrowth);
 
@@ -335,53 +330,6 @@ public class InvestorAgent extends Agent implements Serializable {
         }
     }
 
-    // TODO - IMPLEMENTAR  - faz gestão de follow e unfollow de seguidores
-    private class ManageFollowers extends CyclicBehaviour {
-        public void action() {
-            MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);
-            ACLMessage msg = myAgent.receive(mt);
-
-            // Player agent asks info about the investor agent
-            if (msg != null && msg.getConversationId().equals("rate")) {
-                ACLMessage reply = msg.createReply();
-                reply.setPerformative(ACLMessage.INFORM);
-
-                // TODO - CORRIGIR - colocar aqui a infrmação que o investor deve enviar o player para ser avaliado
-                reply.setContent("colocar aqui informação relevante do investor");
-                myAgent.send(reply);
-            }
-
-            // Player agent asks to be added to followers
-            else if (msg != null && msg.getConversationId().equals("follow")) {
-                addFollower(msg.getSender());
-            }
-
-            // Player agent asks to be removed from followers
-            else if (msg != null && msg.getConversationId().equals("unfollow")) {
-                removeFollower(msg.getSender());
-            }
-        }
-
-        private void addFollower(AID follower){
-            if(!followers.contains(follower))
-                followers.add(follower);
-        }
-
-        private void removeFollower(AID follower){
-            if(followers.contains(follower))
-                followers.remove(follower);
-        }
-
-    }
-
-    // TODO - IMPLEMENTAR - Behaviour para periodicment eenviar informação para os followers deste investor
-    private class SendInfoFollowers extends CyclicBehaviour {
-
-        public void action(){
-
-        }
-    }
-
     private class InvestorChangeSkill extends TickerBehaviour {
         private InvestorAgent agent;
 
@@ -439,4 +387,52 @@ public class InvestorAgent extends Agent implements Serializable {
             }
         }
     }
+
+    // TODO - IMPLEMENTAR  - faz gestão de follow e unfollow de seguidores
+    private class ManageFollowers extends CyclicBehaviour {
+        public void action() {
+            MessageTemplate mt = MessageTemplate.MatchPerformative(ACLMessage.REQUEST);
+            ACLMessage msg = myAgent.receive(mt);
+
+            // Player agent asks info about the investor agent
+            if (msg != null && msg.getConversationId().equals("rate")) {
+                ACLMessage reply = msg.createReply();
+                reply.setPerformative(ACLMessage.INFORM);
+
+                // TODO - CORRIGIR - colocar aqui a infrmação que o investor deve enviar o player para ser avaliado
+                reply.setContent("colocar aqui informação relevante do investor");
+                myAgent.send(reply);
+            }
+
+            // Player agent asks to be added to followers
+            else if (msg != null && msg.getConversationId().equals("follow")) {
+                addFollower(msg.getSender());
+            }
+
+            // Player agent asks to be removed from followers
+            else if (msg != null && msg.getConversationId().equals("unfollow")) {
+                removeFollower(msg.getSender());
+            }
+        }
+
+        private void addFollower(AID follower){
+            if(!followers.contains(follower))
+                followers.add(follower);
+        }
+
+        private void removeFollower(AID follower){
+            if(followers.contains(follower))
+                followers.remove(follower);
+        }
+
+    }
+
+    // TODO - IMPLEMENTAR - Behaviour para periodicment eenviar informação para os followers deste investor
+    private class SendInfoFollowers extends CyclicBehaviour {
+
+        public void action(){
+
+        }
+    }
+
 }
