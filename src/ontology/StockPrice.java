@@ -1,9 +1,7 @@
-package model.onto;
+package ontology;
 
 import jade.content.Concept;
-import jade.content.Predicate;
 
-import java.io.Serializable;
 import java.util.Comparator;
 import java.util.Random;
 

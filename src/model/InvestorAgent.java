@@ -1,25 +1,21 @@
 package model;
 
 import jade.core.AID;
-import jade.content.lang.Codec;
 import jade.content.lang.sl.SLCodec;
-import jade.content.onto.Ontology;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.domain.FIPAException;
 import jade.domain.FIPANames;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
-import model.onto.InvestorInfo;
-import model.onto.MarketPrices;
-import model.onto.StockMarketOntology;
-import sajas.core.Agent;
+import ontology.InvestorInfo;
+import ontology.MarketPrices;
+import ontology.StockMarketOntology;
 import sajas.core.behaviours.CyclicBehaviour;
-import sajas.core.behaviours.SequentialBehaviour;
 import sajas.core.behaviours.SimpleBehaviour;
 import sajas.core.behaviours.TickerBehaviour;
 import sajas.domain.DFService;
-import model.onto.StockPrice;
+import ontology.StockPrice;
 import static utils.Settings.*;
 
 import java.io.Serializable;

@@ -1,4 +1,4 @@
-package model.onto;
+package ontology;
 
 import jade.content.Predicate;
 import java.util.ArrayList;

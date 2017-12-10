@@ -1,21 +1,17 @@
 package model;
 
-import data.Stock;
 import jade.core.AID;
-import jade.content.lang.Codec;
 import jade.content.lang.sl.SLCodec;
-import jade.content.onto.Ontology;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import jade.domain.FIPAException;
 import jade.domain.FIPANames;
 import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
-import model.onto.MarketPrices;
-import model.onto.StockMarketOntology;
+import ontology.MarketPrices;
+import ontology.StockMarketOntology;
 
-import model.onto.StockPrice;
-import sajas.core.Agent;
+import ontology.StockPrice;
 import sajas.core.behaviours.*;
 import sajas.domain.DFService;
 

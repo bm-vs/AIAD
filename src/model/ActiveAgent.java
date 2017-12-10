@@ -1,9 +1,10 @@
 package model;
 
+import data.Transaction;
 import jade.content.lang.Codec;
 import jade.content.onto.Ontology;
 import jade.core.AID;
-import model.onto.StockPrice;
+import ontology.StockPrice;
 import sajas.core.Agent;
 
 import java.util.ArrayList;
