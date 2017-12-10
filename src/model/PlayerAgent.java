@@ -21,11 +21,13 @@ import java.util.*;
 import static utils.Settings.*;
 
 public class PlayerAgent extends ActiveAgent implements Serializable {
+    private HashMap<String, Trust> stocks; // save trust associated with every stock symbol
     private HashMap<AID, Trust> investors; // save trust associated with every investor id
     private AID followed; // investor the player agent is following
 
     public PlayerAgent(String id, float initialCapital) {
         super(id, initialCapital);
+        this.stocks = new HashMap<>();
         this.investors = new HashMap<>();
         this.followed = null;
     }
@@ -207,7 +209,14 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
                     ArrayList<StockPrice> currentPrices = marketInfo.getPrices();
                     if (currentPrices != null) {
                         prices = currentPrices;
-                        // TODO update stock trust
+                        for (StockPrice p: currentPrices) {
+                            Trust trust = stocks.get(p.getSymbol());
+                            if (trust == null) {
+                                trust = new Trust();
+                            }
+                            trust.addPastCapital(p.getCurrPrice());
+                            stocks.put(p.getSymbol(), trust);
+                        }
                         return true;
                     }
                 }
@@ -308,6 +317,7 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
                                 Trust trust = investors.get(investor);
                                 trust.addPastCapital(Float.parseFloat(investorCapital.getContent()));
                                 investors.put(investor, trust);
+                                System.out.println(investor + " - " + trust.getTrust());
                                 done = true;
                             }
                         }
@@ -333,7 +343,7 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
                         for (AID investorID : investors.keySet()) {
                             // TODO check if its worth it to change investor
                             Trust investor = investors.get(investorID);
-                            if (investor.getTrust() > maxTrust && capital >= SUBSCRIBE_TAX) {
+                            if ((investor.getTrust() - maxTrust)*getTotalCapital() > SUBSCRIBE_TAX && capital >= SUBSCRIBE_TAX) {
                                 bestInvestor = investorID;
                                 maxTrust = investor.getTrust();
                             }
@@ -347,7 +357,7 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
                 new OneShotBehaviour() {
                     @Override
                     public void action() {
-                        if (!bestInvestor.equals(followed) && followed != null) {
+                        if (followed != null && !followed.equals(bestInvestor)) {
                             unfollow = new ACLMessage(ACLMessage.CANCEL);
                             unfollow.addReceiver(followed);
                             unfollow.setLanguage(codec.getName());
@@ -371,7 +381,7 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
 
                             ACLMessage unfollowSuccess = receive(mt);
                             if (unfollowSuccess != null) {
-                                System.out.println("Unfollowed " + followed);
+                                System.out.println("Unfollowed: " + followed + " (" + investors.get(followed).getTrust() + ")");
                                 followed = null;
                             }
                         }
@@ -415,7 +425,7 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
                             if (followSuccess != null) {
                                 followed = bestInvestor;
                                 capital -= SUBSCRIBE_TAX;
-                                System.out.println("Followed " + followed);
+                                System.out.println("Followed: " + followed + " (" + investors.get(followed).getTrust() + ")");
                             }
                         }
                     }

@@ -42,6 +42,8 @@ public class InvestorAgent extends ActiveAgent implements Serializable {
         this.skillChangePeriod = skillChangePeriod;
         this.repeat = repeat;
         this.nextSkills = nextSkills;
+        this.informer = new AID();
+        this.followers = new ArrayList<>();
     }
 
     public ArrayList<Integer> getSkill() {
@@ -246,7 +248,7 @@ public class InvestorAgent extends ActiveAgent implements Serializable {
 
                 if (changed) {
                     ACLMessage updateInvestor = new ACLMessage(ACLMessage.PROPOSE);
-                    updateInvestor.addReceiver(new AID("Informer", AID.ISLOCALNAME));
+                    updateInvestor.addReceiver(informer);
                     updateInvestor.setLanguage(codec.getName());
                     updateInvestor.setOntology(stockMarketOntology.getName());
 
@@ -255,7 +257,7 @@ public class InvestorAgent extends ActiveAgent implements Serializable {
                     agent.send(updateInvestor);
 
                     // Only accept proposal messages
-                    MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.ACCEPT_PROPOSAL), MessageTemplate.MatchSender(new AID("Informer", AID.ISLOCALNAME)));
+                    MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.ACCEPT_PROPOSAL), MessageTemplate.MatchSender(informer));
                     ACLMessage reply = receive(mt);
                     if (reply != null) {
                         agent.setSkill(newSkill);

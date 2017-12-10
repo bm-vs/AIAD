@@ -41,7 +41,9 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 	private float initialPlayerCapital = 1000;
     private int dynamicInvestors = 0;
 	private boolean detailedInfo = false;
-	private String customInvestors = "";
+	private String customInvestors = "test4";
+	private float transactionTax = 0.5f;
+	private float subscribeTax = 25f;
 
 	public Repast3InvestingLauncher() {
 		super();
@@ -72,6 +74,14 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 
 	public String getCustomInvestors() { return customInvestors; }
 
+	public float getTransactionTax() {
+		return transactionTax;
+	}
+
+	public float getSubscribeTax() {
+		return subscribeTax;
+	}
+
 	public void setNInvestors(int n) {
 		nInvestors = n;
 	}
@@ -98,9 +108,17 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 
 	public void setCustomInvestors(String s) { customInvestors = s; }
 
+	public void setTransactionTax(float transactionTax) {
+		this.transactionTax = transactionTax;
+	}
+
+	public void setSubscribeTax(float subscribeTax) {
+		this.subscribeTax = subscribeTax;
+	}
+
 	@Override
 	public String[] getInitParam() {
-		return new String[] {"nInvestors", "initialInvestorCapital", "nPlayers", "initialPlayerCapital", "dynamicInvestors", "detailedInfo", "customInvestors"};
+		return new String[] {"nInvestors", "initialInvestorCapital", "nPlayers", "initialPlayerCapital", "dynamicInvestors", "detailedInfo", "customInvestors", "subscribeTax", "transactionTax"};
 	}
 
 	@Override
@@ -168,6 +186,9 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 
 	@Override
 	public void begin() {
+		TRANSACTION_TAX = transactionTax;
+		SUBSCRIBE_TAX = subscribeTax;
+
 		super.begin();
 		buildAndScheduleDisplay();
 	}
@@ -223,8 +244,6 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
         }
 
         getSchedule().scheduleActionAtInterval(100, playerPlot, "step", Schedule.LAST);
-
-
 	}
 
 	// Reads investor type file using customInvestors

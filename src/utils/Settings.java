@@ -12,10 +12,10 @@ public class Settings {
 
     // Informer agent
     public static final int BROADCAST_PERIOD = 20;
-    public static final float SUBSCRIBE_TAX = 0f;
+    public static float SUBSCRIBE_TAX = 25f;
 
     // Player agent
-    public static final int REQUEST_PERIOD = 1000;
+    public static final int REQUEST_PERIOD = 2000;
     public static final String PLAYER_SUBSCRIBE_MSG = "PlayerSubscribe";
 
     // Market times
@@ -31,7 +31,7 @@ public class Settings {
     public static final int TECH = 5;
 
     // Market tax
-    public static final float TRANSACTION_TAX = 0.75f;
+    public static float TRANSACTION_TAX = 0.75f;
 
     // Stock lists to be used for a market
     // Basic - top 5 market cap for each sector from S&P 500
