@@ -24,38 +24,14 @@ import java.util.*;
 
 import static utils.Settings.*;
 
-public class PlayerAgent extends Agent implements Serializable {
-    private Codec codec;
-    private Ontology stockMarketOntology;
-    private String id;
-    private float capital;
-    private float portfolioValue;
+public class PlayerAgent extends ActiveAgent implements Serializable {
     private HashMap<AID, InvestorTrust> investors; // save trust associated with every investor id
     private InvestorTrust followed; // investor the player agent is following
-    private AID informer;
-
 
     public PlayerAgent(String id, float initialCapital) {
-      this.id = id;
-      this.capital = initialCapital;
-      this.investors = new HashMap<>();
-      this.followed = null;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public float getCapital() {
-        return capital;
-    }
-
-    public float getPortfolioValue() {
-        return portfolioValue;
-    }
-
-    public float getTotalCapital() {
-        return capital + portfolioValue;
+        super(id, initialCapital);
+        this.investors = new HashMap<>();
+        this.followed = null;
     }
 
     public void setFollowed(InvestorTrust investor){
@@ -160,13 +136,11 @@ public class PlayerAgent extends Agent implements Serializable {
     private class PlayerTrade extends CyclicBehaviour {
         PlayerAgent agent;
         ArrayList<StockPrice> prices;
-        private int step;
 
         public PlayerTrade(PlayerAgent agent) {
             super(agent);
             this.agent = agent;
             prices = new ArrayList<>();
-            step = 0;
         }
 
         public void action() {
@@ -206,7 +180,7 @@ public class PlayerAgent extends Agent implements Serializable {
                 }
             );
 
-            // Receive price predictions from the subscribed investor and buy/sell
+            // Receive price predictions from the subscribed investor
             seq.addSubBehaviour(
                 new SimpleBehaviour() {
                     boolean received = false;
@@ -231,7 +205,6 @@ public class PlayerAgent extends Agent implements Serializable {
                                             }
                                         }
 
-                                        // TODO buy/sell stock
                                         received = true;
                                     }
                                 }
@@ -248,6 +221,19 @@ public class PlayerAgent extends Agent implements Serializable {
                     @Override
                     public boolean done() {
                         return received;
+                    }
+                }
+            );
+
+            // Buy/sell stock
+            seq.addSubBehaviour(
+                new OneShotBehaviour() {
+                    @Override
+                    public void action() {
+                        if (prices != null) {
+                            moveStock(prices);
+                            updatePortfolioValue(prices);
+                        }
                     }
                 }
             );

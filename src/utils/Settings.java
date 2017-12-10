@@ -12,7 +12,7 @@ public class Settings {
 
     // Informer agent
     public static final int BROADCAST_PERIOD = 20;
-    public static final float SUBSCRIBE_TAX = 10;
+    public static final float SUBSCRIBE_TAX = 0f;
 
     // Player agent
     public static final int REQUEST_PERIOD = 1000;
