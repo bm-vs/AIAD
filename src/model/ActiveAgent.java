@@ -103,7 +103,7 @@ public abstract class ActiveAgent extends Agent {
 
         // Buy stock with highest growth potential to replace the ones sold
         for (int i = 0; i < size; i++) {
-            buyStock(toBuy.get(i), getTotalCapital()/PORTFOLIO_SIZE);
+            buyStock(toBuy.get(i), capital/size);
         }
 
         // Buy stock with biggest growth with the remaining capital
@@ -115,7 +115,7 @@ public abstract class ActiveAgent extends Agent {
 
     // Buy stock
     protected void buyStock(StockPrice stock, float amountPerStock) {
-        int quantity = (int)(amountPerStock/stock.getCurrPrice());
+        int quantity = Math.round(amountPerStock/stock.getCurrPrice()-0.5f);
         if (quantity > 0) {
             boolean transactionFound = false;
             for (Transaction t: active) {
