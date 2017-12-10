@@ -277,7 +277,6 @@ public class InvestorAgent extends ActiveAgent implements Serializable {
             MessageTemplate mt = MessageTemplate.or(MessageTemplate.or(MessageTemplate.MatchPerformative(ACLMessage.REQUEST), MessageTemplate.MatchPerformative(ACLMessage.SUBSCRIBE)), MessageTemplate.MatchPerformative(ACLMessage.CANCEL));
             ACLMessage msg = receive(mt);
 
-
             if (msg != null) {
                 ACLMessage reply = msg.createReply();
 

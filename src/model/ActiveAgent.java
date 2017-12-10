@@ -95,16 +95,22 @@ public abstract class ActiveAgent extends Agent {
         ArrayList<StockPrice> toSell = new ArrayList<>(currentOwned);
         toSell.removeAll(intersection);
 
-        // TODO analyze if worth switching stock
+        // Analyze if worth switching stock
         int size = toBuy.size() < toSell.size() ? toBuy.size(): toSell.size();
-        // Sell stock owned with lowest growth potential
-        for (int i = 0; i < size; i++) {
-            sellStock(toSell.get(i));
-        }
 
-        // Buy stock with highest growth potential to replace the ones sold
+        float c = getTotalCapital();
+        int skip = 0;
         for (int i = 0; i < size; i++) {
-            buyStock(toBuy.get(i), capital/size);
+            StockPrice buy = toBuy.get(i);
+            for (int j = skip; j < size; j++) {
+                StockPrice sell = toSell.get(j);
+                if ((buy.getGrowth()-sell.getGrowth())*c > TRANSACTION_TAX) {
+                    sellStock(sell);
+                    buyStock(buy, capital/size);
+                    skip++;
+                    break;
+                }
+            }
         }
 
         // Buy stock with biggest growth with the remaining capital

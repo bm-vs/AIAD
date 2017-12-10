@@ -341,7 +341,6 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
 
                         // Determine best investor
                         for (AID investorID : investors.keySet()) {
-                            // TODO check if its worth it to change investor
                             Trust investor = investors.get(investorID);
                             if ((investor.getTrust() - maxTrust)*getTotalCapital() > SUBSCRIBE_TAX && capital >= SUBSCRIBE_TAX) {
                                 bestInvestor = investorID;
