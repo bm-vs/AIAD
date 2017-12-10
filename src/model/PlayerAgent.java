@@ -317,7 +317,7 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
                                 Trust trust = investors.get(investor);
                                 trust.addPastCapital(Float.parseFloat(investorCapital.getContent()));
                                 investors.put(investor, trust);
-                                System.out.println(investor + " - " + trust.getTrust());
+                                //System.out.println(investor + " - " + trust.getTrust());
                                 done = true;
                             }
                         }
@@ -380,7 +380,6 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
 
                             ACLMessage unfollowSuccess = receive(mt);
                             if (unfollowSuccess != null) {
-                                System.out.println("Unfollowed: " + followed + " (" + investors.get(followed).getTrust() + ")");
                                 followed = null;
                             }
                         }
@@ -424,7 +423,6 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
                             if (followSuccess != null) {
                                 followed = bestInvestor;
                                 capital -= SUBSCRIBE_TAX;
-                                System.out.println("Followed: " + followed + " (" + investors.get(followed).getTrust() + ")");
                             }
                         }
                     }
