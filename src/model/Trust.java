@@ -1,24 +1,16 @@
 package model;
 
-import jade.core.AID;
-
 import java.util.ArrayList;
 
-public class InvestorTrust {
-    private AID investor;
+public class Trust {
     private float trust;
     private ArrayList<Float> gains;
     private ArrayList<Float> pastCapital;
 
-    public InvestorTrust(AID investor){
-        this.investor = investor;
+    public Trust(){
         this.trust = 0;
         this.gains = new ArrayList<>();
         this.pastCapital = new ArrayList<>();
-    }
-
-    public AID getInvestor() {
-        return investor;
     }
 
     public float getTrust(){

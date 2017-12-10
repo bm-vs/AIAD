@@ -95,6 +95,7 @@ public abstract class ActiveAgent extends Agent {
         ArrayList<StockPrice> toSell = new ArrayList<>(currentOwned);
         toSell.removeAll(intersection);
 
+        // TODO analyze if worth switching stock
         int size = toBuy.size() < toSell.size() ? toBuy.size(): toSell.size();
         // Sell stock owned with lowest growth potential
         for (int i = 0; i < size; i++) {

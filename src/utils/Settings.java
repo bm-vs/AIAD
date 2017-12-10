@@ -40,11 +40,11 @@ public class Settings {
         ArrayList<Stock> stocks = new ArrayList<>(6);
 
         // Telecom
-        stocks.add(new Stock("AT&T",     "T",    "resources/telecom/t.csv", TELECOM));
-        stocks.add(new Stock("Verizon",  "VZ",   "resources/telecom/vz.csv",  TELECOM));
+        stocks.add(new Stock("AT&T",     "T",    "resources/telecom/t.csv",    TELECOM));
+        stocks.add(new Stock("Verizon",  "VZ",   "resources/telecom/vz.csv",   TELECOM));
         stocks.add(new Stock("Cisco",    "CSCO", "resources/telecom/csco.csv", TELECOM));
-        stocks.add(new Stock("T-Mobile", "TMUS", "resources/telecom/tmus.csv",   TELECOM));
-        stocks.add(new Stock("Sprint",   "S",    "resources/telecom/s.csv", TELECOM));
+        stocks.add(new Stock("T-Mobile", "TMUS", "resources/telecom/tmus.csv", TELECOM));
+        stocks.add(new Stock("Sprint",   "S",    "resources/telecom/s.csv",    TELECOM));
 
         // Financial
         stocks.add(new Stock("Berkshire",       "BRK.B", "resources/financial/brk.b.csv", FINANCIAL));
@@ -83,4 +83,20 @@ public class Settings {
 
         return stocks;
     }
+
+    public static ArrayList<Stock> getStockReducedList() {
+        ArrayList<Stock> stocks = new ArrayList<>(6);
+
+        // Telecom
+        stocks.add(new Stock("AT&T",              "T",     "resources/telecom/t.csv",       TELECOM));
+        stocks.add(new Stock("Berkshire",         "BRK.B", "resources/financial/brk.b.csv", FINANCIAL));
+        stocks.add(new Stock("Boeing",            "BA",    "resources/industrial/ba.csv",   INDUSTRIAL));
+        stocks.add(new Stock("Exxon",             "XOM",   "resources/energy/xom.csv",      ENERGY));
+        stocks.add(new Stock("Johnson & Johnson", "JNJ",   "resources/healthcare/jnj.csv",  HEALTHCARE));
+        stocks.add(new Stock("Apple",             "AAPL",  "resources/tech/aapl.csv",       TECH));
+
+        return stocks;
+    }
+
+
 }

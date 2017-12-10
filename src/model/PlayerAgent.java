@@ -21,8 +21,8 @@ import java.util.*;
 import static utils.Settings.*;
 
 public class PlayerAgent extends ActiveAgent implements Serializable {
-    private HashMap<AID, InvestorTrust> investors; // save trust associated with every investor id
-    private InvestorTrust followed; // investor the player agent is following
+    private HashMap<AID, Trust> investors; // save trust associated with every investor id
+    private AID followed; // investor the player agent is following
 
     public PlayerAgent(String id, float initialCapital) {
         super(id, initialCapital);
@@ -30,12 +30,12 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
         this.followed = null;
     }
 
-    public void setFollowed(InvestorTrust investor){
+    public void setFollowed(AID investor){
         this.followed = investor;
     }
 
-    public InvestorTrust getFollowed(){
-        return  followed;
+    public AID getFollowed(){
+        return followed;
     }
 
     @Override
@@ -144,82 +144,47 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
             SequentialBehaviour seq = new SequentialBehaviour();
             addBehaviour(seq);
 
-            // Receive current prices from informer agent
-            seq.addSubBehaviour(
-                new SimpleBehaviour() {
-                    boolean received = false;
+            // Receive current prices from informer agent if not following any investor
+            if (followed == null) {
+                seq.addSubBehaviour(
+                        new SimpleBehaviour() {
+                            boolean received = false;
 
-                    @Override
-                    public void action() {
-                        MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.INFORM), MessageTemplate.MatchSender(agent.informer));
-                        ACLMessage stockPrices = receive(mt);
-                        if (stockPrices != null) {
-                            try {
-                                MarketPrices marketInfo = (MarketPrices) getContentManager().extractContent(stockPrices);
-                                ArrayList<StockPrice> currentPrices = marketInfo.getPrices();
-                                if (prices != null) {
-                                    prices = currentPrices;
-                                    // TODO update stock trust
-                                    received = true;
-                                }
+                            @Override
+                            public void action() {
+                                MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.INFORM), MessageTemplate.MatchSender(agent.informer));
+                                ACLMessage stockPrices = receive(mt);
+                                received = handleStockPrices(stockPrices);
                             }
-                            catch (Exception e) {
-                                e.printStackTrace();
+
+                            @Override
+                            public boolean done() {
+                                return received;
                             }
                         }
-                    }
+                );
+            }
+            // Receive current prices and predictions from the subscribed investor
+            else {
+                seq.addSubBehaviour(
+                    new SimpleBehaviour() {
+                        boolean received = false;
 
-                    @Override
-                    public boolean done() {
-                        return received;
-                    }
-                }
-            );
-
-            // Receive price predictions from the subscribed investor
-            seq.addSubBehaviour(
-                new SimpleBehaviour() {
-                    boolean received = false;
-
-                    @Override
-                    public void action() {
-                        // Receive prices from followed
-                        if (followed != null) {
-                            MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.INFORM), MessageTemplate.MatchSender(followed.getInvestor()));
-                            ACLMessage stockPredictions = receive(mt);
-                            if (stockPredictions != null) {
-                                try {
-                                    MarketPrices marketInfo = (MarketPrices) getContentManager().extractContent(stockPredictions);
-                                    ArrayList<StockPrice> futurePrices = marketInfo.getPrices();
-                                    if (futurePrices != null) {
-                                        for (StockPrice future : futurePrices) {
-                                            for (StockPrice current : prices) {
-                                                if (future.getSymbol().equals(current.getSymbol())) {
-                                                    current.setFuturePrice(future.getFuturePrice());
-                                                    break;
-                                                }
-                                            }
-                                        }
-
-                                        received = true;
-                                    }
-                                }
-                                catch (Exception e) {
-                                    e.printStackTrace();
-                                }
-                            }
+                        @Override
+                        public void action() {
+                            // Receive prices from followed
+                            MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchPerformative(ACLMessage.INFORM), MessageTemplate.MatchSender(followed));
+                            ACLMessage stockPrices = receive(mt);
+                            received = handleStockPrices(stockPrices);
                         }
-                        else {
-                            received = true;
+
+                        @Override
+                        public boolean done() {
+                            return received;
                         }
                     }
-
-                    @Override
-                    public boolean done() {
-                        return received;
-                    }
-                }
-            );
+                );
+            }
 
             // Buy/sell stock
             seq.addSubBehaviour(
@@ -233,6 +198,25 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
                     }
                 }
             );
+        }
+
+        private boolean handleStockPrices(ACLMessage stockPrices) {
+            if (stockPrices != null) {
+                try {
+                    MarketPrices marketInfo = (MarketPrices) getContentManager().extractContent(stockPrices);
+                    ArrayList<StockPrice> currentPrices = marketInfo.getPrices();
+                    if (currentPrices != null) {
+                        prices = currentPrices;
+                        // TODO update stock trust
+                        return true;
+                    }
+                }
+                catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
+            return false;
         }
     }
 
@@ -254,7 +238,7 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
             try {
                 DFAgentDescription[] result = DFService.search(this.agent, template);
                 for (int i = 0; i < result.length; i++) {
-                    this.agent.investors.put(result[i].getName(), new InvestorTrust(result[i].getName()));
+                    this.agent.investors.put(result[i].getName(), new Trust());
                 }
                 foundInvestors = true;
             }
@@ -274,7 +258,7 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
         private ACLMessage requestResults;
         private ACLMessage unfollow;
         private ACLMessage follow;
-        private InvestorTrust bestInvestor;
+        private AID bestInvestor;
 
         public ManageFollowing(PlayerAgent agent) {
             super(agent, REQUEST_PERIOD);
@@ -321,7 +305,7 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
                             // Update investors trust
                             ACLMessage investorCapital = receive(mt);
                             if (investorCapital != null) {
-                                InvestorTrust trust = investors.get(investor);
+                                Trust trust = investors.get(investor);
                                 trust.addPastCapital(Float.parseFloat(investorCapital.getContent()));
                                 investors.put(investor, trust);
                                 done = true;
@@ -343,13 +327,14 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
                     @Override
                     public void action() {
                         bestInvestor = followed;
-                        float maxTrust = followed == null ? -1 : followed.getTrust();
+                        float maxTrust = followed == null ? -1 : investors.get(followed).getTrust();
 
                         // Determine best investor
-                        for (InvestorTrust investor : investors.values()) {
+                        for (AID investorID : investors.keySet()) {
                             // TODO check if its worth it to change investor
+                            Trust investor = investors.get(investorID);
                             if (investor.getTrust() > maxTrust && capital >= SUBSCRIBE_TAX) {
-                                bestInvestor = investor;
+                                bestInvestor = investorID;
                                 maxTrust = investor.getTrust();
                             }
                         }
@@ -364,7 +349,7 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
                     public void action() {
                         if (!bestInvestor.equals(followed) && followed != null) {
                             unfollow = new ACLMessage(ACLMessage.CANCEL);
-                            unfollow.addReceiver(followed.getInvestor());
+                            unfollow.addReceiver(followed);
                             unfollow.setLanguage(codec.getName());
                             unfollow.setOntology(stockMarketOntology.getName());
                             unfollow.setReplyWith(getLocalName() + hashCode() + System.currentTimeMillis());
@@ -386,7 +371,7 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
 
                             ACLMessage unfollowSuccess = receive(mt);
                             if (unfollowSuccess != null) {
-                                System.out.println("Unfollowed " + followed.getInvestor());
+                                System.out.println("Unfollowed " + followed);
                                 followed = null;
                             }
                         }
@@ -406,7 +391,7 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
                     public void action() {
                         if (followed == null) {
                             follow = new ACLMessage(ACLMessage.SUBSCRIBE);
-                            follow.addReceiver(bestInvestor.getInvestor());
+                            follow.addReceiver(bestInvestor);
                             follow.setLanguage(codec.getName());
                             follow.setOntology(stockMarketOntology.getName());
                             follow.setReplyWith(getLocalName() + hashCode() + System.currentTimeMillis());
@@ -430,7 +415,7 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
                             if (followSuccess != null) {
                                 followed = bestInvestor;
                                 capital -= SUBSCRIBE_TAX;
-                                System.out.println("Followed " + followed.getInvestor());
+                                System.out.println("Followed " + followed);
                             }
                         }
                     }
