@@ -1,13 +1,16 @@
 Get historical data at:
 http://finance.google.com/finance/historical?output=csv&q=SYMBOL
 
-Test file format (without \n):
-<id>-
-<initalCapital>-
-<skill>-
-<skillChangePeriod>- (0 for no change)
-<repeat>- (if change loops or not)
-<skill1>_<skill2>_<skill3>... (list of skills to iterate by)
+Test file agent format (all in the same line):
+    <type>-
+    <id>-
+    <initalCapital>-
+if (type == "investor")
+    <skill>-
+    <skillChangePeriod>- (0 for no change)
+if (skillChangePeriod != 0)
+    <repeat>- (if change loops or not)
+    <skill1>_<skill2>_<skill3>... (list of skills to iterate by)
 
 <skill> blocks have the format:
 <skillTELECOM>;<skillFINANCIAL>;<skillINDUSTRIAL>;<skillENERGY>;<skillHEALTHCARE>;<skillTECH>
