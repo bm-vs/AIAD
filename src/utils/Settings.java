@@ -5,6 +5,9 @@ import data.Stock;
 import java.util.ArrayList;
 
 public class Settings {
+    public static final String INVESTOR_TYPE = "investor";
+    public static final String PLAYER_TYPE = "player";
+
     // Investor agent
     public static final int INVESTOR_MAX_SKILL = 11;
     public static final int PORTFOLIO_SIZE = 10;

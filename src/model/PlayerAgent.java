@@ -380,6 +380,7 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
 
                             ACLMessage unfollowSuccess = receive(mt);
                             if (unfollowSuccess != null) {
+                                System.out.println(myAgent.getAID() + " unfollowed: " + followed + " (" + investors.get(followed).getTrust() + ")");
                                 followed = null;
                             }
                         }
@@ -423,6 +424,7 @@ public class PlayerAgent extends ActiveAgent implements Serializable {
                             if (followSuccess != null) {
                                 followed = bestInvestor;
                                 capital -= SUBSCRIBE_TAX;
+                                System.out.println(this.myAgent.getAID() + " followed: " + followed + " (" + investors.get(followed).getTrust() + ")");
                             }
                         }
                     }

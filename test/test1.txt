@@ -1,5 +1,5 @@
-trader1-10000-10;10;10;10;10;10-0
-trader2-10000-7;7;7;7;7;7-0
-trader3-10000-4;4;4;4;4;4-0
-trader4-10000-2;2;2;2;2;2-0
-trader5-10000-0;0;0;0;0;0-0
+investor-trader1-10000-8;8;8;8;8;8-0
+player-player1-10000
+player-player2-5000
+player-player3-1000
+player-player4-500

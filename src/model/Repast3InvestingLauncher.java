@@ -149,9 +149,14 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
                 for (InvestorAgent agent: investors) {
                     agentContainer.acceptNewAgent(agent.getId(), agent).start();
                 }
+
+				System.out.println("Custom Players (n = " + players.size() + ")");
+				for (PlayerAgent agent: players) {
+					agentContainer.acceptNewAgent(agent.getId(), agent).start();
+				}
             }
-			if (!custom) {
-                System.out.println("Random Investors (n = " + nInvestors + ")");
+			if (!custom || investors.size() == 0) {
+				System.out.println("Random Investors (n = " + nInvestors + ")");
 				Random r = new Random();
 				for (int i = 0; i < nInvestors; i++) {
 					String id = "Investor" + i;
@@ -165,14 +170,14 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 					investors.add(agent);
 				}
 			}
-
-			// Create players
-            System.out.println("Random Players (n = " + nPlayers + ")");
-			for (int i = 0; i < nPlayers; i++) {
-				String id = "Player" + i;
-				PlayerAgent agent = new PlayerAgent(id, initialPlayerCapital);
-				agentContainer.acceptNewAgent(id, agent).start();
-				players.add(agent);
+			if (!custom || players.size() == 0) {
+				System.out.println("Random Players (n = " + nPlayers + ")");
+				for (int i = 0; i < nPlayers; i++) {
+					String id = "Player" + i;
+					PlayerAgent agent = new PlayerAgent(id, initialPlayerCapital);
+					agentContainer.acceptNewAgent(id, agent).start();
+					players.add(agent);
+				}
 			}
 
 			// Create informer agent
@@ -240,6 +245,18 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
                     return agent.getTotalCapital();
                 }
             });
+			if (detailedInfo) {
+				playerPlot.addSequence(agent.getId() + "(C)", new Sequence() {
+					public double getSValue() {
+						return agent.getCapital();
+					}
+				});
+				playerPlot.addSequence(agent.getId() + "(P)", new Sequence() {
+					public double getSValue() {
+						return agent.getPortfolioValue();
+					}
+				});
+			}
             playerPlot.display();
         }
 
@@ -249,7 +266,8 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 	// Reads investor type file using customInvestors
 	private boolean readCustomFile() {
         try {
-            ArrayList<InvestorAgent> custom = new ArrayList<>();
+            ArrayList<InvestorAgent> inv = new ArrayList<>();
+            ArrayList<PlayerAgent> plr = new ArrayList<>();
 
             File file = new File("test/" + customInvestors + ".txt");
             FileReader fileReader = new FileReader(file);
@@ -257,39 +275,45 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
             String line;
             while ((line = bufferedReader.readLine()) != null) {
                 String[] info = line.split("-");
-                String id = info[0];
-                float capital = Float.parseFloat(info[1]);
-                String[] skillString = info[2].split(";");
+                String type = info[0];
+                String id = info[1];
+				float capital = Float.parseFloat(info[2]);
+				if (type.equals("investor")) {
+					String[] skillString = info[3].split(";");
 
-				ArrayList<Integer> skill = new ArrayList<>();
-                for (String s: skillString) {
-                	skill.add(Integer.parseInt(s));
+					ArrayList<Integer> skill = new ArrayList<>();
+					for (String s : skillString) {
+						skill.add(Integer.parseInt(s));
+					}
+
+					int skillChangePeriod = Integer.parseInt(info[4]);
+
+					if (skillChangePeriod != 0) {
+						boolean repeat = Boolean.parseBoolean(info[5]);
+						String[] nextSkillsString = info[6].split("_");
+						ArrayList<ArrayList<Integer>> nextSkills = new ArrayList<>();
+						for (String ns : nextSkillsString) {
+							String[] nextSkillString = ns.split(";");
+
+							ArrayList<Integer> nextSkill = new ArrayList<>();
+							for (String s : nextSkillString) {
+								nextSkill.add(Integer.parseInt(s));
+							}
+							nextSkills.add(nextSkill);
+						}
+
+						inv.add(new InvestorAgent(id, capital, skill, skillChangePeriod, nextSkills, repeat));
+					} else {
+						inv.add(new InvestorAgent(id, capital, skill, skillChangePeriod));
+					}
 				}
-
-				int skillChangePeriod = Integer.parseInt(info[3]);
-
-                if (skillChangePeriod != 0) {
-                    boolean repeat = Boolean.parseBoolean(info[4]);
-                    String[] nextSkillsString = info[5].split("_");
-                    ArrayList<ArrayList<Integer>> nextSkills = new ArrayList<>();
-                    for (String ns: nextSkillsString) {
-                        String[] nextSkillString = ns.split(";");
-
-                        ArrayList<Integer> nextSkill = new ArrayList<>();
-                        for (String s: nextSkillString) {
-                            nextSkill.add(Integer.parseInt(s));
-                        }
-                        nextSkills.add(nextSkill);
-                    }
-
-                    custom.add(new InvestorAgent(id, capital, skill, skillChangePeriod, nextSkills, repeat));
-                }
-                else {
-                    custom.add(new InvestorAgent(id, capital, skill, skillChangePeriod));
-                }
+				else {
+					plr.add(new PlayerAgent(id, capital));
+				}
             }
             fileReader.close();
-            investors = custom;
+            investors = inv;
+            players = plr;
         }
         catch (Exception e) {
             return false;
