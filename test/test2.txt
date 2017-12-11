@@ -1,0 +1,4 @@
+investor-trader1-10000-10;10;10;10;10;10-0
+investor-trader2-10000-8;8;8;8;8;8-0
+investor-trader3-10000-4;4;4;4;4;4-0
+investor-trader4-10000-0;0;0;0;0;0-0

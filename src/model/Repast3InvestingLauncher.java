@@ -38,10 +38,10 @@ public class Repast3InvestingLauncher extends Repast3Launcher {
 	private int nInvestors = 1;
 	private float initialInvestorCapital = 10000;
 	private int nPlayers = 1;
-	private float initialPlayerCapital = 1000;
+	private float initialPlayerCapital = 10000;
     private int dynamicInvestors = 0;
 	private boolean detailedInfo = false;
-	private String customInvestors = "test4";
+	private String customInvestors = "";
 	private float transactionTax = 0.5f;
 	private float subscribeTax = 25f;
 
